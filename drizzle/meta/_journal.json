@@ -15,6 +15,27 @@
       "when": 1789078870949,
       "tag": "0001_ordinary_the_executioner",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789351424549,
+      "tag": "0002_admin_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1789351426457,
+      "tag": "0003_seed_site_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1789352985687,
+      "tag": "0004_blocked_phones",
+      "breakpoints": true
     }
   ]
 }

@@ -19,6 +19,46 @@
 .location-map{min-height:380px;background:#eeeeea;border:1px solid #d6d6d1}.location-map iframe{display:block;width:100%;height:100%;min-height:380px;border:0}
 @media(max-width:1000px){.location{grid-template-columns:260px minmax(0,1fr);gap:28px}}
 @media(max-width:760px){.nav-location{display:none}.location{display:flex;flex-direction:column;gap:22px;margin-top:40px;padding-top:26px}.location-map,.location-map iframe{min-height:300px}}
+/* Blocked phone: the error offers a direct WhatsApp contact. */
+.error-whatsapp{display:inline-flex;align-items:center;gap:9px;margin-top:12px;padding:11px 16px;background:#ad282a;color:#fff;font-weight:700;font-size:14px;line-height:1.3}.error-whatsapp:hover{background:#8c1f21;color:#fff}.error-whatsapp svg{flex-shrink:0}
+/* More than four services: the list scrolls, leaving part of the fifth card visible as a cue. */
+.service-list.is-scrollable{max-height:520px;overflow-y:auto;overscroll-behavior:contain;border-bottom:1px solid #202020;scrollbar-width:thin;scrollbar-color:#ad282a #eeeeea}
+.service-list.is-scrollable .service-card:last-child{border-bottom:0}
+/* Admin panel (/admin): reuses the booking panel, header and form language. */
+.loading-note{font-size:14px;color:#686860;padding:18px 0;margin:0;line-height:1.6}
+.nav-button{display:flex;align-items:center;gap:7px;background:none;border:0;padding:0;color:inherit;font:inherit;font-size:14px}.nav-button:hover{color:#e6a5a6}
+.admin-login{max-width:460px;margin:12px auto 0}.admin-title{font-size:26px;font-weight:700;letter-spacing:-.8px;margin:0 0 10px}.admin-lead{color:#64645f;margin:0 0 26px;line-height:1.5}
+.admin-form>label,.admin-field>label:not(.admin-check){display:block;font-size:14px;font-weight:700;margin-bottom:10px}
+.admin-form input:not([type=checkbox]){height:48px!important;border-radius:0!important;background:#fff;font-size:16px!important}
+.admin-form>input{margin-bottom:22px}.admin-submit{width:100%;margin-top:8px}.admin-login-error{margin:0 0 18px}
+.admin-tabs{display:flex;flex-direction:column;background:#202020;padding:10px 0}
+.admin-tabs button{display:flex;align-items:center;gap:12px;padding:15px 22px;background:none;border:0;border-left:3px solid transparent;color:#c7c7c1;font-size:14px;text-align:left}
+.admin-tabs button svg:last-child{margin-left:auto;opacity:.45}.admin-tabs button:hover{color:#fff}
+.admin-tabs button.current{color:#fff;border-left-color:#ad282a;background:#2c2c2c;font-weight:700}.admin-tabs button.current svg:first-child{color:#cb6869}
+.admin-user{font-size:13px;color:#62625c;margin:16px 0 0;line-height:1.6}
+.admin-notice{display:flex;gap:10px;align-items:center;margin-top:20px;padding:14px;border-left:3px solid #202020;background:#f2f2ed;font-size:14px;line-height:1.5}.admin-notice svg{flex-shrink:0}
+.day-list{border-top:1px solid #202020}
+.day-row{display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;padding:18px 0;border-bottom:1px solid #d6d6d1;align-items:start}
+.day-head{display:flex;flex-direction:column;gap:8px}.day-head strong{font-size:16px}.day-row.is-closed .day-head strong{color:#73736e}
+.day-closed{margin:0;font-size:14px;color:#ad282a;padding-top:2px}
+.admin-check{display:inline-flex;align-items:center;gap:8px;font-size:14px;color:#5d5d58}.admin-check input{width:18px;height:18px;margin:0;accent-color:#ad282a}
+.periods{display:flex;flex-direction:column;gap:10px}.period{display:flex;align-items:center;gap:10px}.period input{max-width:140px}.period>span{font-size:13px;color:#686860}
+.icon-button{display:grid;place-items:center;width:44px;height:44px;flex-shrink:0;border:1px solid #d6d6d1;background:#fff;color:#202020}
+.icon-button:hover:not(:disabled){color:#ad282a;border-color:#ad282a}.icon-button:disabled{opacity:.35}
+.text-button{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;background:none;border:0;padding:8px 0;font-size:14px;font-weight:700;color:#ad282a}.text-button:hover:not(:disabled){color:#8c1f21}.text-button:disabled{opacity:.4}
+.service-edit-list{border-top:1px solid #202020;margin-bottom:12px}
+.service-edit{display:grid;grid-template-columns:minmax(0,1fr) 120px 140px auto;gap:12px;align-items:end;padding:20px 0;border-bottom:1px solid #d6d6d1}
+.admin-field>label:not(.admin-check){font-size:13px;margin-bottom:8px}
+.service-actions{display:flex;gap:6px}
+.admin-hint{font-size:13px;color:#676760;line-height:1.6;margin:12px 0 0}
+.block-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.block-form .wide{grid-column:1/-1}.block-all-day{display:flex;align-items:flex-end;padding-bottom:14px}
+.admin-subtitle{font-size:16px;font-weight:700;margin:34px 0 14px}
+.admin-empty{font-size:14px;color:#686860;padding:18px 0;margin:0;border-top:1px solid #d6d6d1}
+.block-list{list-style:none;margin:0;padding:0;border-top:1px solid #202020}
+.block-list li{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 0;border-bottom:1px solid #d6d6d1}
+.block-list .text-button{flex-shrink:0}.block-list strong{display:block;font-size:15px;margin-bottom:5px}.block-list span{font-size:14px;color:#5d5d58;line-height:1.5}
+@media(max-width:1000px){.service-edit{grid-template-columns:minmax(0,1fr) 110px 120px}.service-actions{grid-column:1/-1;justify-content:flex-end}}
+@media(max-width:760px){.admin-workspace>aside{order:-1}.admin-tabs{flex-direction:row;overflow-x:auto;padding:0}.admin-tabs button{flex-shrink:0;white-space:nowrap;padding:14px 16px;border-left:0;border-bottom:3px solid transparent}.admin-tabs button.current{border-bottom-color:#ad282a}.admin-tabs button svg:last-child{display:none}.admin-user{display:none}.day-row{grid-template-columns:1fr;gap:12px}.day-head{flex-direction:row;justify-content:space-between;align-items:center}.period input{max-width:none;flex:1;min-width:0}.service-edit{grid-template-columns:1fr 1fr}.service-edit .service-name{grid-column:1/-1}.block-form{grid-template-columns:1fr}.block-all-day{padding-bottom:0}}
 /* Booking motion inspired by Não Codei: short reveals and tactile feedback. */
 @keyframes booking-reveal{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes booking-confirm{0%{opacity:0;transform:scale(.82)}70%{opacity:1;transform:scale(1.06)}100%{transform:scale(1)}}

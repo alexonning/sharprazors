@@ -6,5 +6,7 @@ dist
 .sites-runtime
 .playwright-mcp
 api_key.txt
+.dev.vars
+**/.dev.vars
 .env*
 tsconfig.tsbuildinfo

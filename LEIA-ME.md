@@ -24,6 +24,27 @@ Abra o endereço informado no terminal (normalmente http://localhost:5173).
 Aplique as migrações uma única vez em cada banco local novo.
 Para executar a versão compilada, use `pnpm start` após `pnpm build`.
 
+## Painel administrativo (/admin)
+
+Em `/admin` o administrador altera WhatsApp e telefone, horário de funcionamento, serviços (duração e valor), ausências em datas e horários específicos e a lista de telefones bloqueados (clientes que não podem agendar). As mudanças aparecem imediatamente no agendamento.
+
+Depois de aplicar todas as migrações da pasta `drizzle/`, crie (ou redefina) o acesso:
+
+```sh
+node scripts/admin-user.mjs admin SuaSenhaForte
+```
+
+No Render, defina as variáveis `ADMIN_USERNAME` e `ADMIN_PASSWORD`; o acesso é criado apenas na primeira inicialização e a senha trocada pelo painel é mantida depois.
+
+## Banco de dados em produção (Postgres)
+
+Com `DATABASE_URL` definida, o site usa Postgres; sem ela, usa o D1 local (`pnpm dev`). As mesmas consultas SQL funcionam nos dois.
+
+- `DATABASE_URL`: conexão do Postgres (no Render, use a URL interna).
+- `DATABASE_SCHEMA` (opcional): schema próprio dentro de um banco compartilhado, por exemplo `sharprazors`.
+
+Ao iniciar, `scripts/render-start.sh` executa `scripts/postgres-migrate.mjs`, que cria o schema, as tabelas (`db/postgres.sql`) e os dados padrão sem sobrescrever o que já existe. Alterações de estrutura precisam ser feitas em `db/schema.ts` (D1) e em `db/postgres.sql` (Postgres).
+
 ## Onde editar
 
 - `app/page.tsx`: fluxo, conteúdo e ícones da página.
