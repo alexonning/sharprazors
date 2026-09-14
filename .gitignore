@@ -45,3 +45,5 @@ next-env.d.ts
 /outputs/
 /work/
 /.playwright-mcp/
+# Render API key (secret)
+api_key.txt

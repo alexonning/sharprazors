@@ -1,0 +1,10 @@
+.git
+node_modules
+dist
+.wrangler
+.vinext
+.sites-runtime
+.playwright-mcp
+api_key.txt
+.env*
+tsconfig.tsbuildinfo
