@@ -1,0 +1,5 @@
+export const services=[{id:"corte",name:"Corte de cabelo",detail:"Seu estilo, do seu jeito.",duration:30},{id:"barba",name:"Barba",detail:"Cuidado em cada detalhe.",duration:30},{id:"combo",name:"Corte + barba",detail:"O cuidado completo em uma visita.",duration:60}];
+export const today=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"America/Sao_Paulo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+export function validDate(date:string){return /^\d{4}-\d{2}-\d{2}$/.test(date)&&!isNaN(Date.parse(date))&&new Date(date+"T12:00:00Z").toISOString().slice(0,10)===date&&date>=today()&&Date.parse(date)<=Date.now()+90*86400000}
+export function slots(date:string,duration:number){if(!validDate(date))return [];const day=new Date(date+"T12:00:00Z").getUTCDay();if(day===0)return [];const result:number[]=[];for(const [start,end] of [[480,690],[810,day===6?1020:1170]])for(let t=start;t+duration<=end;t+=30){if(new Date(date+"T"+time(t)+":00-03:00").getTime()>Date.now())result.push(t)}return result}
+export function time(n:number){return String(Math.floor(n/60)).padStart(2,"0")+":"+String(n%60).padStart(2,"0")}
