@@ -10,6 +10,15 @@
 
 /* Mobile booking controls remain readable at narrow widths. */
 .steps button,.duration,.phone-help,.wheel-controls>span{font-size:14px}.steps{flex-wrap:wrap;gap:8px 18px}.steps button{min-height:48px}.date-selection>input{width:100%;min-width:0}.panel-footer{flex-wrap:wrap}@media(max-width:380px){.panel-footer .primary{width:100%}.steps{padding:0 10px;gap:4px 10px}.steps button{gap:4px}.brand>span{font-size:16px}.header nav{gap:10px}.service-number{display:none}}
+/* WhatsApp contact and shop location map. */
+.hours>a+a{border-top:0;padding-top:14px;margin-top:0}
+.location{margin-top:56px;display:grid;grid-template-columns:310px minmax(0,1fr);gap:48px;align-items:stretch;border-top:4px solid #202020;padding-top:32px}
+.location-info h2{font-family:Impact,'Arial Narrow',Arial,sans-serif;font-size:clamp(28px,3vw,39px);line-height:1.05;font-weight:900;margin:0 0 16px}.location-info h2>span{color:#ad282a}
+.location-info>p:not(.eyebrow){font-size:15px;line-height:1.6;color:#5d5d58;margin:0 0 22px}
+.location-link{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #ccc;padding:16px 0;font-size:14px}.location-link svg:first-child{flex-shrink:0}.location-link:hover{color:#ad282a}.location-link>svg:last-child{margin-left:auto}
+.location-map{min-height:380px;background:#eeeeea;border:1px solid #d6d6d1}.location-map iframe{display:block;width:100%;height:100%;min-height:380px;border:0}
+@media(max-width:1000px){.location{grid-template-columns:260px minmax(0,1fr);gap:28px}}
+@media(max-width:760px){.nav-location{display:none}.location{display:flex;flex-direction:column;gap:22px;margin-top:40px;padding-top:26px}.location-map,.location-map iframe{min-height:300px}}
 /* Booking motion inspired by Não Codei: short reveals and tactile feedback. */
 @keyframes booking-reveal{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes booking-confirm{0%{opacity:0;transform:scale(.82)}70%{opacity:1;transform:scale(1.06)}100%{transform:scale(1)}}
