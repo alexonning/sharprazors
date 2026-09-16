@@ -11,8 +11,8 @@ const ifMissing = args.includes("--if-missing");
 const [argUser, argPassword] = args.filter((arg) => arg !== "--if-missing");
 const username = (argUser ?? process.env.ADMIN_USERNAME ?? "").trim();
 const password = argPassword ?? process.env.ADMIN_PASSWORD ?? "";
-if (!username || password.length < 8) {
-  console.error("Uso: node scripts/admin-user.mjs <usuario> <senha com 8 ou mais caracteres>");
+if (!username || password.length < 1) {
+  console.error("Uso: node scripts/admin-user.mjs <usuario> <senha não vazia>");
   process.exit(1);
 }
 

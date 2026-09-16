@@ -21,7 +21,7 @@ Substitua `ENCODED_DATABASE_PASSWORD` pela senha do PostgreSQL codificada para U
 | `DATABASE_URL` | URI de **Connect → Session pooler**, porta **5432**, do projeto `spring-ia`, com a senha do banco e `?sslmode=verify-full` | Obrigatória |
 | `DATABASE_SCHEMA` | `sharprazors` | Recomendada; padrão para hosts Supabase |
 | `ADMIN_USERNAME` | Nome escolhido para acessar `/admin` | Necessária para criar o primeiro administrador |
-| `ADMIN_PASSWORD` | Senha forte com pelo menos 8 caracteres | Necessária junto com `ADMIN_USERNAME` no primeiro início |
+| `ADMIN_PASSWORD` | Senha inicial do painel (recomenda-se 8 ou mais caracteres) | Necessária junto com `ADMIN_USERNAME` no primeiro início |
 | `PORT` | Fornecida pelo Render; padrão `10000` | Não precisa cadastrar manualmente |
 
 Cadastre os segredos em **Render → serviço → Environment**. Use `.env.example`

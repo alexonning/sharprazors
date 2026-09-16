@@ -3,9 +3,10 @@ import { blockedPhoneCode, blockedPhoneError, findCustomer, isPhoneBlocked } fro
 import {db} from "@/db/raw";
 import {slots,validDate} from "@/lib/booking";
 import {blocksOn,loadConfig} from "@/lib/site-config";
+import {hasSameOrigin} from "@/lib/request-origin";
 export async function GET(req:Request){try{const q=new URL(req.url).searchParams;const date=q.get("date")||"";const config=await loadConfig();const service=config.services.find(s=>s.id===q.get("service"));if(!service||!validDate(date))return Response.json({error:"Selecione uma data válida nos próximos 90 dias."},{status:400});const [rows,blocks]=await Promise.all([db().prepare('SELECT start,"end" FROM bookings WHERE date = ?').bind(date).all<{start:number,end:number}>(),blocksOn(date)]);return Response.json({slots:slots(date,service.duration,config.hours,blocks).filter(t=>!rows.results.some(b=>t<b.end&&t+service.duration>b.start))},{headers:{"Cache-Control":"no-store"}})}catch(e){console.error("availability",e);return Response.json({error:"Não foi possível carregar a agenda. Tente novamente."},{status:503})}}
 export async function POST(req: Request) {
-  if (req.headers.get("origin") && req.headers.get("origin") !== new URL(req.url).origin)
+  if (!hasSameOrigin(req))
     return Response.json({ error: "Origem inválida" }, { status: 403 });
   let body:any;
   try { body = await req.json(); } catch { return Response.json({ error: "Dados inválidos." }, { status: 400 }); }

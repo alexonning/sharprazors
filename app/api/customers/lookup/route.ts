@@ -1,7 +1,8 @@
 import { normalizePhone } from "@/lib/phone";
 import { blockedPhoneCode, blockedPhoneError, findCustomer, isPhoneBlocked } from "@/db/customers";
+import { hasSameOrigin } from "@/lib/request-origin";
 export async function POST(req: Request) {
-  if (req.headers.get("origin") && req.headers.get("origin") !== new URL(req.url).origin)
+  if (!hasSameOrigin(req))
     return Response.json({ error: "Origem inválida." }, { status: 403 });
   let body;
   try { body = await req.json(); } catch { return Response.json({ error: "Informe um telefone válido." }, { status: 400 }); }

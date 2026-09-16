@@ -3,6 +3,7 @@ import {currentAdmin,hashPassword,login,logout,readToken,sessionCookie,tokenHash
 import {normalizePhone} from "@/lib/phone";
 import {today,validDate,validHours,type Block,type BlockedPhone} from "@/lib/booking";
 import {loadConfig} from "@/lib/site-config";
+import {hasSameOrigin} from "@/lib/request-origin";
 
 const noStore={"Cache-Control":"no-store"};
 const fail=(error:string,status=400)=>Response.json({error},{status,headers:noStore});
@@ -27,7 +28,7 @@ export async function GET(req:Request){
 }
 
 export async function POST(req:Request){
-  if(req.headers.get("origin")&&req.headers.get("origin")!==new URL(req.url).origin)return fail("Origem inválida.",403);
+  if (!hasSameOrigin(req))return fail("Origem inválida.",403);
   let body:any;
   try{body=await req.json()}catch{return fail("Dados inválidos.")}
   try{
