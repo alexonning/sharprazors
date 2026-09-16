@@ -7,6 +7,11 @@ RUN apt-get update \
   && npm install -g pnpm@11.19.0
 
 WORKDIR /app
+
+# Trust Supabase's database root CA inside the Workerd runtime used by Render.
+COPY db/supabase-prod-ca-2021.crt /usr/local/share/ca-certificates/supabase-prod-ca-2021.crt
+RUN update-ca-certificates
+
 ENV CI=true \
   WRANGLER_SEND_METRICS=false \
   CLOUDFLARE_CF_FETCH_ENABLED=false
