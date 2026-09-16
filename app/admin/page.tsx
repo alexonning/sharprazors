@@ -55,7 +55,7 @@ function HoursTab(ctx:Ctx){
  function setEdge(day:number,index:number,edge:0|1,value:string){const n=minutes(value);if(n!==null)update(day,d=>({...d,periods:d.periods.map((p,i)=>i===index?(edge===0?[n,p[1]]:[p[0],n]) as Period:p)}))}
  async function save(e:React.FormEvent){e.preventDefault();const data=await action.run({action:"hours",hours},"Horário de funcionamento atualizado. A agenda do site já segue a nova grade.");if(data)setHours(structuredClone(data.hours))}
  return <form className="admin-form" onSubmit={save}>
-  <Heading title="Horário de funcionamento" text="Defina os dias e períodos de atendimento. Os horários oferecidos no agendamento seguem esta grade, em intervalos de 30 minutos."/>
+  <Heading title="Horário de funcionamento" text="Defina os dias e períodos de atendimento. Os horários oferecidos no agendamento seguem esta grade, em intervalos de 15 minutos."/>
   <div className="day-list">{dayOrder.map(day=>{const d=hours[day];return <div key={day} className={"day-row"+(d.closed?" is-closed":"")}>
    <div className="day-head"><strong>{weekdays[day]}</strong><label className="admin-check"><input type="checkbox" checked={!d.closed} onChange={e=>{const opened=e.target.checked;update(day,x=>({closed:!opened,periods:opened&&x.periods.length===0?[[480,720]]:x.periods}))}}/>Aberto</label></div>
    {d.closed?<p className="day-closed">Sem atendimento</p>:<div className="periods">{d.periods.map((p,i)=><div className="period" key={i}>
