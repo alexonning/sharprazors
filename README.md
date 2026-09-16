@@ -1,5 +1,9 @@
 # vinext-starter
 
+For this application's Supabase (`spring-ia`) connection and Docker/Render deployment,
+see [SUPABASE-DEPLOY.md](SUPABASE-DEPLOY.md) and [.env.example](.env.example).
+The sections below describe the original starter and its optional D1 runtime.
+
 A clean full-stack starter running on [vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and Drizzle support.
 
 ## Prerequisites

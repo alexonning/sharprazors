@@ -36,12 +36,15 @@ node scripts/admin-user.mjs admin SuaSenhaForte
 
 No Render, defina as variáveis `ADMIN_USERNAME` e `ADMIN_PASSWORD`; o acesso é criado apenas na primeira inicialização e a senha trocada pelo painel é mantida depois.
 
-## Banco de dados em produção (Postgres)
+## Banco de dados em produção (Supabase)
 
-Com `DATABASE_URL` definida, o site usa Postgres; sem ela, usa o D1 local (`pnpm dev`). As mesmas consultas SQL funcionam nos dois.
+O deploy usa o PostgreSQL do projeto **spring-ia** no Supabase. Veja os valores
+de conexão e as instruções em [SUPABASE-DEPLOY.md](SUPABASE-DEPLOY.md) e
+[.env.example](.env.example). Sem `DATABASE_URL`, o desenvolvimento local usa D1;
+o deploy Docker exige essa variável para evitar perda de dados em disco efêmero.
 
-- `DATABASE_URL`: conexão do Postgres (no Render, use a URL interna).
-- `DATABASE_SCHEMA` (opcional): schema próprio dentro de um banco compartilhado, por exemplo `sharprazors`.
+- `DATABASE_URL`: conexão **Session Pooler**, porta **5432**, do Supabase, com SSL.
+- `DATABASE_SCHEMA`: `sharprazors` (padrão para Supabase), separado das tabelas existentes.
 
 Ao iniciar, `scripts/render-start.sh` executa `scripts/postgres-migrate.mjs`, que cria o schema, as tabelas (`db/postgres.sql`) e os dados padrão sem sobrescrever o que já existe. Alterações de estrutura precisam ser feitas em `db/schema.ts` (D1) e em `db/postgres.sql` (Postgres).
 
