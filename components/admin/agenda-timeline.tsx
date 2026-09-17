@@ -1,10 +1,9 @@
 "use client";
 import {useEffect,useState,useCallback,useMemo} from "react";
-import {Check,ChevronsUpDown,Calendar,Plus,ChevronLeft,ChevronRight,Phone,Clock,User,Scissors,DollarSign,Timer,CheckCircle2,XCircle,AlertCircle,PlayCircle,StopCircle,RefreshCw,MessageCircle,History,MapPin} from "lucide-react";
+import {Calendar,Plus,ChevronLeft,ChevronRight,Phone,Clock,User,Scissors,DollarSign,Timer,CheckCircle2,XCircle,AlertCircle,PlayCircle,StopCircle,RefreshCw,MessageCircle,History,MapPin} from "lucide-react";
 import {Button} from "@/components/ui/button";
-import {Popover,PopoverTrigger,PopoverContent} from "@/components/ui/popover";
-import {Command,CommandInput,CommandList,CommandEmpty,CommandGroup,CommandItem} from "@/components/ui/command";
-import {agendaTitle,agendaHistory,isPastAppointment} from "@/lib/agenda";
+import {MultiSelect} from "@/components/ui/multi-select";
+import {agendaTitle,agendaHistory,isPastAppointment,filterCustomers} from "@/lib/agenda";
 import {Badge} from "@/components/ui/badge";
 import {Separator} from "@/components/ui/separator";
 import {Sheet,SheetContent,SheetHeader,SheetTitle,SheetDescription} from "@/components/ui/sheet";
@@ -40,9 +39,8 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
   const[now,setNow]=useState(getNowMinutes());
   const[today,setToday]=useState(todayStr);
   const[expandedHistory,setExpandedHistory]=useState(false);
-  const[filterOpen,setFilterOpen]=useState(false);
   const[selectedDate,setSelectedDate]=useState(todayStr());
-  const[activeFilter,setActiveFilter]=useState<string|null>(null);
+  const[selectedCustomers,setSelectedCustomers]=useState<string[]>([]);
   const[detailBooking,setDetailBooking]=useState<Booking|null>(null);
   const[customerDetail,setCustomerDetail]=useState<CustomerDetail|null>(null);
   const[loadingDetail,setLoadingDetail]=useState(false);
@@ -60,9 +58,8 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
   },[todayBookings]);
 
   const filteredBookings=useMemo(()=>{
-    if(!activeFilter)return todayBookings;
-    return todayBookings.filter(b=>b.name===activeFilter);
-  },[todayBookings,activeFilter]);
+    return filterCustomers(todayBookings,selectedCustomers);
+  },[todayBookings,selectedCustomers]);
 
   const {visible:visibleBookings,hiddenCount}=agendaHistory(filteredBookings,today,now,expandedHistory);
   const nowMarkerIndex=visibleBookings.findIndex(b=>b.start>now);
@@ -101,8 +98,7 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
     if(detailBooking)loadCustomer(detailBooking.phone);
   },[detailBooking,loadCustomer]);
 
-  const changeDate=(date:string)=>{setSelectedDate(date);setActiveFilter(null);setExpandedHistory(false);setFilterOpen(false)};
-  const chooseCustomer=(name:string|null)=>{setActiveFilter(name);setExpandedHistory(false);setFilterOpen(false)};
+  const changeDate=(date:string)=>{setSelectedDate(date);setSelectedCustomers([]);setExpandedHistory(false)};
   const navigateDate=(offset:number)=>{
     const d=new Date(selectedDate+"T12:00:00");
     d.setDate(d.getDate()+offset);
@@ -129,26 +125,9 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
           </div>
         </div>
         {customerNames.length>0&&<div className="tl-customer-filter">
-          <label id="agenda-customer-label">Filtrar por cliente</label>
-          <Popover open={filterOpen} onOpenChange={setFilterOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-between" aria-labelledby="agenda-customer-label agenda-customer-value">
-                <span id="agenda-customer-value" className="truncate">{activeFilter||"Todos os clientes"}</span><ChevronsUpDown size={16}/>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-0">
-              <Command>
-                <CommandInput placeholder="Digite o nome do cliente..." aria-label="Buscar cliente por nome"/>
-                <CommandList>
-                  <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
-                  <CommandGroup>
-                    <CommandItem value="all-customers" keywords={["Todos os clientes"]} onSelect={()=>chooseCustomer(null)}>Todos os clientes{!activeFilter&&<Check className="ml-auto"/>}</CommandItem>
-                    {customerNames.map(name=><CommandItem key={name} value={"customer:"+name} keywords={[name]} onSelect={()=>chooseCustomer(name)}>{name}{activeFilter===name&&<Check className="ml-auto"/>}</CommandItem>)}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+          <label htmlFor="agenda-customers">Filtrar por clientes</label>
+          <MultiSelect id="agenda-customers" items={customerNames} value={selectedCustomers} onValueChange={names=>{setSelectedCustomers(names);setExpandedHistory(false)}} placeholder="Todos os clientes"/>
+          {selectedCustomers.length>0&&<button type="button" className="text-button" onClick={()=>{setSelectedCustomers([]);setExpandedHistory(false)}}>Limpar filtros</button>}
         </div>}
       </div>
 

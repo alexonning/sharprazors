@@ -1,6 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { agendaTitle, agendaHistory } from '../lib/agenda.ts';
+import { agendaTitle, agendaHistory, filterCustomers } from '../lib/agenda.ts';
+
+test('client multi-select combines selected names and clears back to all', () => {
+  const rows=[{name:'Ana'},{name:'Bruno'},{name:'Carla'},{name:'Ana'}];
+  assert.deepEqual(filterCustomers(rows,['Ana','Carla']),[rows[0],rows[2],rows[3]]);
+  assert.deepEqual(filterCustomers(rows,['Carla']),[rows[2]]);
+  assert.deepEqual(filterCustomers(rows,[]),rows);
+});
 
 test('agenda titles follow the selected date, including year boundaries', () => {
   assert.equal(agendaTitle('2026-09-17', '2026-09-17'), 'Agenda de Hoje');

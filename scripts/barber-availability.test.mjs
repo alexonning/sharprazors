@@ -29,6 +29,20 @@ test('offers five-minute intervals while respecting duration and shop blocks', (
   assert.deepEqual(slots(date, 30, hours, [{ start: 630, end: 660 }]), [600]);
 });
 
+test('closing at 19:30 allows only services that fit completely before closing', () => {
+  const date = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+  const hours = Array.from({ length: 7 }, () => ({ closed: false, periods: [[810, 1170]] }));
+  assert.equal(slots(date, 15, hours).at(-1), 1155); // Corte: 19:15.
+  assert.equal(slots(date, 10, hours).at(-1), 1160); // Barba: 19:20.
+  assert.equal(slots(date, 20, hours).at(-1), 1150); // Combo: 19:10.
+  const reserved = [{ start: 810, end: 1160, barber: 'x', status: 'agendado' }];
+  const remaining = duration => slots(date, duration, hours).filter(start =>
+    freeBarbers(start, duration, [barbers[0]], reserved).length > 0);
+  assert.deepEqual(remaining(15), []);
+  assert.deepEqual(remaining(20), []);
+  assert.deepEqual(remaining(10), [1160]);
+});
+
 function database() {
   const db = new DatabaseSync(':memory:');
   db.exec(`CREATE TABLE barbers(id TEXT PRIMARY KEY,name TEXT,active INTEGER,position INTEGER);

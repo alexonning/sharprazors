@@ -1,5 +1,9 @@
 type Appointment = { date: string; end: number };
 
+export function filterCustomers<T extends {name:string}>(bookings:T[], names:string[]) {
+  return names.length ? bookings.filter(booking=>names.includes(booking.name)) : bookings;
+}
+
 export function agendaTitle(date: string, today: string) {
   if (date === today) return "Agenda de Hoje";
   const tomorrow = new Date(today + "T12:00:00Z");
