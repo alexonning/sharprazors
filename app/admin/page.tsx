@@ -1,6 +1,6 @@
 "use client";
 import {useEffect,useState} from "react";
-import {ArrowRight,Ban,CalendarOff,Check,ChevronDown,ChevronRight,ChevronUp,Clock,KeyRound,LogOut,Phone,Plus,Scissors,Trash2} from "lucide-react";
+import {ArrowRight,Ban,Calendar,CalendarOff,Check,ChevronDown,ChevronRight,ChevronUp,Clock,KeyRound,LogOut,Phone,Plus,Scissors,Trash2} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {PhoneInput} from "@/components/phone-input";
@@ -163,7 +163,7 @@ function AgendaTab(ctx:Ctx){
    <Heading title="Agenda" text="Visualização da agenda de atendimentos com clientes, horários e serviços. Cores diferenciam os serviços."/>
    <div className="booking-list">{bookingRows.length===0?<p className="admin-empty">Nenhum agendamento encontrado.</p>:<ul className="booking-list-grid">{bookingRows.map((b)=><li key={b.id} className="booking-item">
     <div className="booking-color-block" style={{backgroundColor:`hsl(${b.color}, 70%, 60%)`} as React.CSSProperties}/><div className="booking-info">
-     <strong>{b.name}</strong><span>{time(b.start)} – ${time(b.end)}</span><span>{b.service||"Serviço"}</span>
+     <strong>{b.name}</strong><span>{time(b.start)} – {time(b.end)}</span><span>{b.service||"Serviço"}</span>
     </div></li>)}</ul>}</div>
    <Feedback action={action}/>
   </div>
