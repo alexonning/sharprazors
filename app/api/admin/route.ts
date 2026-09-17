@@ -22,7 +22,7 @@ async function dashboard(username:string){
     loadConfig(),
     db().prepare('SELECT id,date,start,"end",reason FROM schedule_blocks WHERE date >= ? ORDER BY date,start').bind(today()).all<Block>(),
     db().prepare('SELECT phone,reason,created_at AS "createdAt" FROM blocked_phones ORDER BY created_at DESC').all<BlockedPhone>(),
-    db().prepare('SELECT id,date,start,end,service,name,phone FROM bookings ORDER BY date,start').all()
+    db().prepare('SELECT id,date,start,"end",service,name,phone FROM bookings ORDER BY date,start').all()
   ]);
   const services=config.services||[];
   return {username,...config,blocks:blocks.results,blockedPhones:blockedPhones.results,bookings:bookings.results,serviceColors:buildServiceColors(services)};
