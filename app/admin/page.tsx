@@ -8,7 +8,7 @@ import {formatPhone} from "@/lib/phone";
 import {minutes,time,today,weekdays,type Block,type BlockedPhone,type DayHours,type Period,type Service,type SiteConfig} from "@/lib/booking";
 
 type Booking={id:string,date:string,start:number,end:number,service:string,name:string,phone:string,color:string};
-type Dashboard=SiteConfig&{username:string,blocks:Booking[],blockedPhones:BlockedPhone[],bookings:Booking[],serviceColors:(id:string)=>string};
+type Dashboard=SiteConfig&{username:string,blocks:Booking[],blockedPhones:BlockedPhone[],bookings:Booking[],serviceColors:Record<string,string>};
 type Tab="contato"|"horarios"|"servicos"|"ausencias"|"bloqueios"|"senha"|"agenda";
 type Ctx={data:Dashboard,onData:(data:Dashboard)=>void,onExpired:()=>void};
 const tabs:{id:Tab,label:string,Icon:typeof Clock}[]=[{id:"contato",label:"Contato",Icon:Phone},{id:"horarios",label:"Horário de funcionamento",Icon:Clock},{id:"servicos",label:"Serviços e valores",Icon:Scissors},{id:"ausencias",label:"Ausências",Icon:CalendarOff},{id:"bloqueios",label:"Telefones bloqueados",Icon:Ban},{id:"senha",label:"Alterar senha",Icon:KeyRound},{id:"agenda",label:"Agenda",Icon:Calendar}];
@@ -157,8 +157,8 @@ function BlockedPhonesTab(ctx:Ctx){
 function AgendaTab(ctx:Ctx){
   const action=useAction(ctx);
   const bookings=ctx.data.bookings||[];
-  const getColor=(serviceId:string)=>ctx.serviceColors(serviceId)||"210";
-  const bookingRows=bookings.map((b)=>({...b,color:getColor(b.service)}));
+  const colorMap=ctx.data.serviceColors||{};
+  const bookingRows=bookings.map((b)=>({...b,color:colorMap[b.service]||"210"}));
   return <div className="admin-form">
    <Heading title="Agenda" text="Visualização da agenda de atendimentos com clientes, horários e serviços. Cores diferenciam os serviços."/>
    <div className="booking-list">{bookingRows.length===0?<p className="admin-empty">Nenhum agendamento encontrado.</p>:<ul className="booking-list-grid">{bookingRows.map((b)=><li key={b.id} className="booking-item">

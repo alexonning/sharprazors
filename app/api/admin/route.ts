@@ -10,13 +10,11 @@ const fail=(error:string,status=400)=>Response.json({error},{status,headers:noSt
 const ok=(data:object,headers:Record<string,string>={})=>Response.json(data,{headers:{...noStore,...headers}});
 const setting=(key:string,value:string)=>db().prepare("INSERT INTO settings (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind(key,value);
 
-const serviceColors:Record<string,string>={};
-function getServiceColor(serviceId:string){
-  if(!serviceColors[serviceId]){
-    const hues=["210","270","140","340","30"];
-    serviceColors[serviceId]=hues[Math.floor(Math.random()*hues.length)];
-  }
-  return serviceColors[serviceId];
+function buildServiceColors(services:{id:string}[]):Record<string,string>{
+  const hues=["210","270","140","340","30"];
+  const map:Record<string,string>={};
+  services.forEach((s,i)=>{map[s.id]=hues[i%hues.length]});
+  return map;
 }
 
 async function dashboard(username:string){
@@ -27,7 +25,7 @@ async function dashboard(username:string){
     db().prepare('SELECT id,date,start,end,service,name,phone FROM bookings ORDER BY date,start').all()
   ]);
   const services=config.services||[];
-  return {username,...config,blocks:blocks.results,blockedPhones:blockedPhones.results,bookings:bookings.results,serviceColors:getServiceColor};
+  return {username,...config,blocks:blocks.results,blockedPhones:blockedPhones.results,bookings:bookings.results,serviceColors:buildServiceColors(services)};
 }
 
 export async function GET(req:Request){
