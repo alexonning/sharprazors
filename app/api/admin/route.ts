@@ -28,6 +28,7 @@ async function dashboard(username:string){
   ]);
   const services=config.services||[];
   return {username,...config,blocks:blocks.results,blockedPhones:blockedPhones.results,bookings:bookings.results,serviceColors:getServiceColor};
+}
 
 export async function GET(req:Request){
   try{
