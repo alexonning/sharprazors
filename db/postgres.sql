@@ -1,5 +1,5 @@
 -- Postgres schema used when DATABASE_URL is set (Render). Mirrors db/schema.ts and is safe to run on every start.
-CREATE TABLE IF NOT EXISTS bookings (id text PRIMARY KEY, date text NOT NULL, start integer NOT NULL, "end" integer NOT NULL, service text NOT NULL, name text NOT NULL, phone text NOT NULL, created_at text NOT NULL);
+CREATE TABLE IF NOT EXISTS bookings (id text PRIMARY KEY, date text NOT NULL, start integer NOT NULL, "end" integer NOT NULL, service text NOT NULL, name text NOT NULL, phone text NOT NULL, status text NOT NULL DEFAULT 'agendado', created_at text NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_bookings_date_start ON bookings (date, start);
 CREATE INDEX IF NOT EXISTS idx_bookings_phone ON bookings (phone);
 CREATE TABLE IF NOT EXISTS customers (phone text PRIMARY KEY, name text NOT NULL, created_at text NOT NULL);
@@ -10,6 +10,10 @@ CREATE INDEX IF NOT EXISTS idx_schedule_blocks_date ON schedule_blocks (date);
 CREATE TABLE IF NOT EXISTS blocked_phones (phone text PRIMARY KEY, reason text NOT NULL DEFAULT '', created_at text NOT NULL);
 CREATE TABLE IF NOT EXISTS admin_users (username text PRIMARY KEY, password_hash text NOT NULL, updated_at text NOT NULL);
 CREATE TABLE IF NOT EXISTS admin_sessions (token_hash text PRIMARY KEY, username text NOT NULL, expires_at text NOT NULL);
+
+-- Add status column to bookings if missing (idempotent for existing databases).
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'agendado';
+UPDATE bookings SET status='agendado' WHERE status IS NULL;
 
 -- Defaults for a new database only; existing rows (including ones edited in /admin) are never overwritten.
 INSERT INTO services (id, name, duration, price_cents, position, active) VALUES

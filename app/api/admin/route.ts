@@ -22,7 +22,7 @@ async function dashboard(username:string){
     loadConfig(),
     db().prepare('SELECT id,date,start,"end",reason FROM schedule_blocks WHERE date >= ? ORDER BY date,start').bind(today()).all<Block>(),
     db().prepare('SELECT phone,reason,created_at AS "createdAt" FROM blocked_phones ORDER BY created_at DESC').all<BlockedPhone>(),
-    db().prepare('SELECT id,date,start,"end",service,name,phone FROM bookings ORDER BY date,start').all()
+    db().prepare('SELECT id,date,start,"end",service,name,phone,status FROM bookings ORDER BY date,start').all()
   ]);
   const services=config.services||[];
   return {username,...config,blocks:blocks.results,blockedPhones:blockedPhones.results,bookings:bookings.results,serviceColors:buildServiceColors(services)};
@@ -122,6 +122,14 @@ export async function POST(req:Request){
         if(typeof body.phone!=="string")return fail("Telefone inválido.");
         await db().prepare("DELETE FROM blocked_phones WHERE phone=?").bind(body.phone).run();
         break;
+      case "updateBookingStatus":{
+        if(typeof body.id!=="string")return fail("Agendamento inválido.");
+        const validStatuses=["agendado","confirmado","em_atendimento","finalizado","cancelado","nao_compareceu"];
+        const newStatus=typeof body.status==="string"?body.status:"";
+        if(!validStatuses.includes(newStatus))return fail("Status inválido.");
+        await db().prepare("UPDATE bookings SET status=? WHERE id=?").bind(newStatus,body.id).run();
+        break;
+      }
       default:
         return fail("Ação desconhecida.");
     }

@@ -6,8 +6,9 @@ import {Input} from "@/components/ui/input";
 import {PhoneInput} from "@/components/phone-input";
 import {formatPhone} from "@/lib/phone";
 import {minutes,time,today,weekdays,type Block,type BlockedPhone,type DayHours,type Period,type Service,type SiteConfig} from "@/lib/booking";
+import {AgendaTimeline} from "@/components/admin/agenda-timeline";
 
-type Booking={id:string,date:string,start:number,end:number,service:string,name:string,phone:string,color:string};
+type Booking={id:string,date:string,start:number,end:number,service:string,name:string,phone:string,status:string};
 type Dashboard=SiteConfig&{username:string,blocks:Booking[],blockedPhones:BlockedPhone[],bookings:Booking[],serviceColors:Record<string,string>};
 type Tab="contato"|"horarios"|"servicos"|"ausencias"|"bloqueios"|"senha"|"agenda";
 type Ctx={data:Dashboard,onData:(data:Dashboard)=>void,onExpired:()=>void};
@@ -155,18 +156,7 @@ function BlockedPhonesTab(ctx:Ctx){
 }
 
 function AgendaTab(ctx:Ctx){
-  const action=useAction(ctx);
-  const bookings=ctx.data.bookings||[];
-  const colorMap=ctx.data.serviceColors||{};
-  const bookingRows=bookings.map((b)=>({...b,color:colorMap[b.service]||"210"}));
-  return <div className="admin-form">
-   <Heading title="Agenda" text="Visualização da agenda de atendimentos com clientes, horários e serviços. Cores diferenciam os serviços."/>
-   <div className="booking-list">{bookingRows.length===0?<p className="admin-empty">Nenhum agendamento encontrado.</p>:<ul className="booking-list-grid">{bookingRows.map((b)=><li key={b.id} className="booking-item">
-    <div className="booking-color-block" style={{backgroundColor:`hsl(${b.color}, 70%, 60%)`} as React.CSSProperties}/><div className="booking-info">
-     <strong>{b.name}</strong><span>{time(b.start)} – {time(b.end)}</span><span>{b.service||"Serviço"}</span>
-    </div></li>)}</ul>}</div>
-   <Feedback action={action}/>
-  </div>
+  return <AgendaTimeline bookings={ctx.data.bookings||[]} services={ctx.data.services} onData={ctx.onData}/>
  }
 
  function PasswordTab(ctx:Ctx){
