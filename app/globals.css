@@ -208,3 +208,6 @@
   .tl-card{margin:2px 0 2px 4px}
   .tl-card-footer{flex-direction:column;align-items:flex-start;gap:4px}
 }
+
+.tl-customer-filter{display:grid;gap:6px;max-width:360px;width:100%}
+.tl-customer-filter label{font-size:12px;font-weight:600;color:#6b7280}

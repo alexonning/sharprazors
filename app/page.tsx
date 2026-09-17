@@ -6,6 +6,7 @@ import {RadioGroup,RadioGroupItem} from "@/components/ui/radio-group";
 import {Select,SelectContent,SelectGroup,SelectItem,SelectLabel,SelectTrigger,SelectValue} from "@/components/ui/select";
 import {Input} from "@/components/ui/input";
 import {PhoneInput} from "@/components/phone-input";
+import {defaultBarber,type AvailableBarber} from "@/lib/barber-availability";
 import {normalizePhone,formatPhone} from "@/lib/phone";
 import {today,time,price,hoursSummary,type SiteConfig} from "@/lib/booking";
 function Instagram({size=24}:{size?:number}){
@@ -27,6 +28,9 @@ return <div className="time-picker"><div className="wheel-label"><span>HORÁRIO<
 export default function Home(){
 const [service,setService]=useState("corte"),[step,setStep]=useState(0),[date,setDate]=useState(today()),[slot,setSlot]=useState<number|null>(null),[available,setAvailable]=useState<number[]>([]),[loading,setLoading]=useState(false),[error,setError]=useState(""),[name,setName]=useState(""),[phone,setPhone]=useState(""),[saving,setSaving]=useState(false),[booking,setBooking]=useState<string|null>(null),[reload,setReload]=useState(0);
 const [barber,setBarber]=useState("qualquer"),[barbersList,setBarbersList]=useState<{id:string,name:string}[]>([]);
+const [availability,setAvailability]=useState<{start:number,barbers:AvailableBarber[]}[]>([]);
+const slotBarbers=availability.find(option=>option.start===slot)?.barbers??[];
+function chooseSlot(value:number){if(value!==slot){setSlot(value);setBarber(defaultBarber(availability.find(option=>option.start===value)?.barbers??[]))}}
 const [customerState,setCustomerState]=useState<"unknown"|"existing"|"new">("unknown");
 const [site,setSite]=useState<SiteConfig|null>(null),[siteError,setSiteError]=useState(""),[blocked,setBlocked]=useState(false);
 const panelRef=useRef<HTMLDivElement>(null);
@@ -36,9 +40,9 @@ useEffect(()=>{
  return()=>animation?.cancel();
 },[step,booking]);
 useEffect(()=>{fetch("/api/site",{cache:"no-store"}).then(async r=>{const d=await r.json() as SiteConfig&{error?:string};if(!r.ok)throw Error(d.error);setSite(d);setService(current=>d.services.some(s=>s.id===current)?current:d.services[0]?.id??"")}).catch(e=>setSiteError((e as Error).message||"Não foi possível carregar os dados da barbearia."))},[]);
-useEffect(()=>{fetch("/api/barbers",{cache:"no-store"}).then(async r=>{const d=await r.json() as {id:string,name:string}[];setBarbersList(d)}).catch(()=>{})},[]);
+
 const selected=site?.services.find(s=>s.id===service);
-useEffect(()=>{if(!selected)return;const abort=new AbortController();setLoading(true);setSlot(null);setError("");fetch(`/api/bookings?date=${date}&service=${service}`,{signal:abort.signal}).then(async r=>{const d=await r.json();if(!r.ok)throw Error(d.error);setAvailable(d.slots)}).catch(e=>{if(e.name!=="AbortError"){setError(e.message);setAvailable([])}}).finally(()=>{if(!abort.signal.aborted)setLoading(false)});return()=>abort.abort()},[date,service,reload,site]);
+useEffect(()=>{if(!selected)return;const abort=new AbortController();setLoading(true);setSlot(null);setBarber("qualquer");setAvailability([]);setAvailable([]);setError("");fetch(`/api/bookings?date=${date}&service=${service}`,{signal:abort.signal}).then(async r=>{const d=await r.json();if(!r.ok)throw Error(d.error);setAvailable(d.slots);setAvailability(d.availability);setBarbersList(d.barbers)}).catch(e=>{if(e.name!=="AbortError"){setError(e.message);setAvailable([])}}).finally(()=>{if(!abort.signal.aborted)setLoading(false)});return()=>abort.abort()},[date,service,reload,site]);
 useEffect(()=>{const context=(document as any).modelContext;if(!site||!context?.registerTool)return;const life=new AbortController();Promise.resolve(context.registerTool({name:"select_booking_service",description:"Seleciona o serviço no formulário, sem criar uma reserva.",inputSchema:{type:"object",properties:{service:{type:"string",enum:site.services.map(s=>s.id)}},required:["service"],additionalProperties:false},annotations:{readOnlyHint:false},execute:async(input:any)=>{if(!site.services.some(s=>s.id===input.service))throw Error("Serviço inválido");setService(input.service);setStep(0);return {selectedService:input.service}}},{signal:life.signal})).catch(()=>{});return()=>life.abort()},[site]);
 async function submit(e:React.FormEvent){
  e.preventDefault();if(saving)return;setError("");setBlocked(false);
@@ -51,7 +55,7 @@ async function submit(e:React.FormEvent){
    setCustomerState(d.registered?"existing":"new");return;
   }
    const r=await fetch("/api/bookings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({service,date,start:slot,barber,...(customerState==="new"?{name}:{}),phone})});
-  const d=await r.json();if(!r.ok){if(d.code==="NAME_REQUIRED")setCustomerState("new");if(d.code==="PHONE_BLOCKED")setBlocked(true);if(r.status===409){setStep(1);setReload(x=>x+1)}throw Error(d.error)}setBooking(d.id);
+  const d=await r.json();if(!r.ok){if(d.code==="NAME_REQUIRED")setCustomerState("new");if(d.code==="PHONE_BLOCKED")setBlocked(true);if(r.status===409){setStep(1);setReload(x=>x+1)}throw Error(d.error)}setBarber(d.barber);setBooking(d.id);
  }catch(e){setError((e as Error).message)}finally{setSaving(false)}
 }
 const prettyDate=new Date(date+"T12:00:00").toLocaleDateString("pt-BR",{day:"numeric",month:"long"});
@@ -59,9 +63,19 @@ return <div className="site"><header className="header"><a href="/" className="b
 <main><div className="intro"><p className="eyebrow">BARBEARIA SHARP RAZORS</p><h1>MARQUE SEU HORÁRIO<span>.</span></h1></div>
 <div className="workspace" id="agendamento"><section className="booking-panel"><div className="steps">{["Serviço","Data e horário","Finalizar"].map((s,i)=><button key={s} disabled={i>step||!!booking||saving} onClick={()=>setStep(i)} className={i===step?"current":i<step?"done":""}><span>{i<step?<Check size={15}/>:"0"+(i+1)}</span>{s}{i<2&&<ChevronRight className="step-chevron" size={15}/>}</button>)}</div>
 {booking?<div ref={panelRef} className="success"><div className="success-icon"><Check size={34}/></div><p className="eyebrow">TUDO CERTO</p><h2>Horário reservado!</h2><p>Seu agendamento está registrado.</p><div className="receipt"><strong>{selected?.name}</strong><span>{prettyDate} às {time(slot!)}</span><span>{barbersList.find(b=>b.id===barber)?.name||"Qualquer disponível"} · {selected?.duration} min</span><small>Comprovante: {booking.slice(0,8).toUpperCase()}</small></div><p className="fine">Guarde este comprovante. Para alterações, entre em contato com a barbearia pelo WhatsApp ou Instagram.</p><Button className="primary" onClick={()=>{setBooking(null);setStep(0);setName("");setPhone("");setBarber("qualquer");setCustomerState("unknown");setReload(x=>x+1)}}>Fazer outro agendamento <ArrowRight/></Button></div>:<div ref={panelRef} className="panel-body">
-<div className="section-heading"><p className="eyebrow">ETAPA 0{step+1} DE 03</p><h2>{["O que vai ser hoje?","Escolha o seu horário.","Finalizar."][step]}</h2><p>{["Escolha o serviço para o seu próximo atendimento.","Escolha uma data e um dos horários disponíveis.","Informe seus dados e selecione o barbeiro para confirmar."][step]}</p></div>
+<div className="section-heading"><p className="eyebrow">ETAPA 0{step+1} DE 03</p><h2>{["O que vai ser hoje?","Escolha o seu horário.","Finalizar."][step]}</h2><p>{["Escolha o serviço para o seu próximo atendimento.","Escolha a data, o horário e o barbeiro disponível.","Informe seus dados para confirmar o atendimento."][step]}</p></div>
 {step===0&&(site?<><RadioGroup value={service} onValueChange={setService} className={"service-list"+(site.services.length>4?" is-scrollable":"")} aria-label="Serviço">{site.services.map((s,i)=><label key={s.id} className={"service-card "+(service===s.id?"selected":"")} htmlFor={"service-"+s.id}><span className="service-number">{String(i+1).padStart(2,"0")}</span><div className="service-copy"><h3>{s.name}</h3><span className="duration"><Clock size={13}/>{s.duration} min <b>·</b> {price(s.priceCents)}</span></div><RadioGroupItem value={s.id} id={"service-"+s.id}/></label>)}</RadioGroup><div className="quiet-note"><ShieldCheck size={17}/> O valor do serviço é confirmado com a barbearia.</div></>:<p className="loading-note" role={siteError?"alert":undefined}>{siteError||"Carregando serviços…"}</p>)}
-{step===1&&<div className="date-selection"><label htmlFor="date">Data do atendimento</label><Input id="date" type="date" min={today()} max={new Date(Date.now()+89*86400000).toISOString().slice(0,10)} value={date} onChange={e=>setDate(e.target.value)}/><div className="availability" aria-live="polite">{loading?<p>Consultando horários…</p>:available.length===0?<div className="empty"><CalendarDays/><p>Nenhum horário disponível nesta data.</p><span>Selecione outro dia para continuar.</span></div>:<TimeWheel values={available} value={slot} onChange={setSlot}/>}</div><p className="fine">Horários de Brasília. Agendamentos com até 90 dias de antecedência.</p></div>}
+{step===1&&<div className="date-selection"><label htmlFor="date">Data do atendimento</label><Input id="date" type="date" min={today()} max={new Date(Date.now()+89*86400000).toISOString().slice(0,10)} value={date} onChange={e=>setDate(e.target.value)}/><div className="availability" aria-live="polite">{loading?<p>Consultando horários…</p>:available.length===0?<div className="empty"><CalendarDays/><p>Nenhum horário disponível nesta data.</p><span>Selecione outro dia para continuar.</span></div>:<TimeWheel values={available} value={slot} onChange={chooseSlot}/>}</div><div className="barber-field">
+<label htmlFor="booking-barber">Barbeiro</label>
+<Select value={barber} onValueChange={setBarber} disabled={saving||loading||slot===null}>
+<SelectTrigger id="booking-barber" className="w-full"><SelectValue placeholder="Selecione o barbeiro"/></SelectTrigger>
+<SelectContent><SelectGroup><SelectLabel>Barbeiros</SelectLabel>
+{slotBarbers.length!==1&&<SelectItem value="qualquer">Qualquer disponível</SelectItem>}
+{slotBarbers.map((b)=><SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+</SelectGroup></SelectContent>
+</Select>
+</div>
+<p className="fine">Horários de Brasília. Agendamentos com até 90 dias de antecedência.</p></div>}
 {step===2&&<form id="booking-form" onSubmit={submit} className="details-form">
 <label htmlFor="phone">Telefone com DDD</label>
 <PhoneInput id="phone" describedBy="phone-help" disabled={saving} value={phone} onChange={value=>{setPhone(value);setCustomerState("unknown");setName("");setError("");setBlocked(false)}}/>
@@ -69,16 +83,6 @@ return <div className="site"><header className="header"><a href="/" className="b
 <div aria-live="polite">
 {customerState==="existing"&&<div className="customer-found"><Check size={20}/><div><strong>Telefone já cadastrado.</strong><p>Confira o horário abaixo e confirme sua reserva.</p></div></div>}
 {customerState==="new"&&<div className="new-customer"><p>Primeira vez com este telefone? Informe seu nome para o cadastro.</p><label htmlFor="name">Nome completo</label><Input id="name" autoComplete="name" placeholder="Seu nome completo" required minLength={3} maxLength={100} disabled={saving} value={name} onChange={e=>setName(e.target.value)}/></div>}
-</div>
-<div className="barber-field">
-<label htmlFor="booking-barber">Barbeiro</label>
-<Select value={barber} onValueChange={setBarber} disabled={saving}>
-<SelectTrigger id="booking-barber" className="w-full"><SelectValue placeholder="Selecione o barbeiro"/></SelectTrigger>
-<SelectContent><SelectGroup><SelectLabel>Barbeiros</SelectLabel>
-<SelectItem value="qualquer">Qualquer disponível</SelectItem>
-{barbersList.filter(b=>b.id!=="qualquer").map((b)=><SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
-</SelectGroup></SelectContent>
-</Select>
 </div>
 {customerState!=="unknown"&&<div className="confirmation-summary"><span>SEU AGENDAMENTO</span><strong>{selected?.name}</strong><p>{prettyDate} às {slot===null?"—":time(slot)} · {selected?.duration} min · {barbersList.find(b=>b.id===barber)?.name||"Qualquer disponível"}</p></div>}
 <div className="contact-note"><ShieldCheck size={21}/><p>Seus dados serão usados pela barbearia para identificar e atender seu agendamento.</p></div>

@@ -4,14 +4,15 @@ import supabaseRootCertificate from "./supabase-prod-ca-2021.crt?raw";
 type Row=Record<string,unknown>;
 export type QueryResult<T=Row>={results:T[],meta:{changes:number}};
 export interface Statement{bind(...values:unknown[]):Statement;first<T=Row>():Promise<T|null>;all<T=Row>():Promise<QueryResult<T>>;run():Promise<QueryResult>}
-export interface Database{prepare(sql:string):Statement;batch<T=Row>(statements:Statement[]):Promise<QueryResult<T>[]>}
+export interface Database{prepare(sql:string):Statement;batch<T=Row>(statements:Statement[],options?:{serializeBookings?:boolean}):Promise<QueryResult<T>[]>}
 
 // One D1-style API over two backends: Supabase/Postgres when DATABASE_URL is set, D1 otherwise.
 // Queries must run on both: "?" placeholders, quoted "end" and camelCase aliases, CAST(...) instead of "::".
 export function db():Database{
   if(env.DATABASE_URL)return postgres(env.DATABASE_URL,env.DATABASE_SCHEMA);
   if(!env.DB)throw new Error("Agenda indisponível");
-  return env.DB as unknown as Database;
+  const d1=env.DB as unknown as Database;
+  return {prepare:sql=>d1.prepare(sql),batch:statements=>d1.batch(statements)};
 }
 
 type PgClient=import("pg").Client;
@@ -41,9 +42,13 @@ function postgres(url:string,schema?:string):Database{
   return {
     prepare:sql=>statement(sql),
     // Same guarantee as D1 batches: all statements commit together or none do.
-    batch:statements=>withClient(async client=>{
+    batch:(statements,options)=>withClient(async client=>{
       await client.query("BEGIN");
       try{
+        // A separate lock statement gives the following SELECT/INSERT a fresh
+        // snapshot after any concurrent reservation commits. D1 batches already
+        // serialize writes; Postgres needs this explicit transaction lock.
+        if(options?.serializeBookings)await client.query('LOCK TABLE bookings IN SHARE ROW EXCLUSIVE MODE');
         const results=[];
         for(const s of statements as PgStatement[])results.push(await execute(client,s));
         await client.query("COMMIT");

@@ -1,7 +1,10 @@
 "use client";
 import {useEffect,useState,useCallback,useMemo} from "react";
-import {Calendar,Plus,ChevronLeft,ChevronRight,Phone,Clock,User,Scissors,DollarSign,Timer,CheckCircle2,XCircle,AlertCircle,PlayCircle,StopCircle,RefreshCw,MessageCircle,History,MapPin} from "lucide-react";
+import {Check,ChevronsUpDown,Calendar,Plus,ChevronLeft,ChevronRight,Phone,Clock,User,Scissors,DollarSign,Timer,CheckCircle2,XCircle,AlertCircle,PlayCircle,StopCircle,RefreshCw,MessageCircle,History,MapPin} from "lucide-react";
 import {Button} from "@/components/ui/button";
+import {Popover,PopoverTrigger,PopoverContent} from "@/components/ui/popover";
+import {Command,CommandInput,CommandList,CommandEmpty,CommandGroup,CommandItem} from "@/components/ui/command";
+import {agendaTitle,agendaHistory,isPastAppointment} from "@/lib/agenda";
 import {Badge} from "@/components/ui/badge";
 import {Separator} from "@/components/ui/separator";
 import {Sheet,SheetContent,SheetHeader,SheetTitle,SheetDescription} from "@/components/ui/sheet";
@@ -21,7 +24,7 @@ const STATUS_CONFIG:Record<StatusKey,{label:string;color:string,bg:string,icon:a
 };
 function getStatus(s:string):StatusKey{return STATUS_CONFIG[s as StatusKey]?s as StatusKey:"agendado"}
 function getInitials(name:string){return name.split(" ").map(w=>w[0]).filter(Boolean).slice(0,2).join("").toUpperCase()}
-function getNowMinutes(){const n=new Date();return n.getHours()*60+n.getMinutes()}
+function getNowMinutes(){const parts=new Intl.DateTimeFormat("en-GB",{timeZone:"America/Sao_Paulo",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date());return Number(parts.find(p=>p.type==="hour")?.value)*60+Number(parts.find(p=>p.type==="minute")?.value)}
 function minutesUntil(target:number){const diff=target-getNowMinutes();if(diff<0)return null;const h=Math.floor(diff/60);const m=diff%60;if(h===0)return`${m} min`;return`${h}h${m>0?` ${m}min`:''}`}
 function longDateBR(dateStr:string){return new Date(dateStr+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}
 function relativeDate(dateStr:string){
@@ -35,6 +38,9 @@ function todayStr(){return new Intl.DateTimeFormat("en-CA",{timeZone:"America/Sa
 
 export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],services:Service[],onData:(d:any)=>void}){
   const[now,setNow]=useState(getNowMinutes());
+  const[today,setToday]=useState(todayStr);
+  const[expandedHistory,setExpandedHistory]=useState(false);
+  const[filterOpen,setFilterOpen]=useState(false);
   const[selectedDate,setSelectedDate]=useState(todayStr());
   const[activeFilter,setActiveFilter]=useState<string|null>(null);
   const[detailBooking,setDetailBooking]=useState<Booking|null>(null);
@@ -42,15 +48,15 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
   const[loadingDetail,setLoadingDetail]=useState(false);
   const[updatingStatus,setUpdatingStatus]=useState<string|null>(null);
 
-  useEffect(()=>{const id=setInterval(()=>setNow(getNowMinutes()),60000);return()=>clearInterval(id)},[]);
+  useEffect(()=>{const id=setInterval(()=>{setNow(getNowMinutes());setToday(todayStr())},60000);return()=>clearInterval(id)},[]);
 
   const todayBookings=useMemo(()=>{
     return bookings.filter(b=>b.date===selectedDate).sort((a,b)=>a.start-b.start);
   },[bookings,selectedDate]);
 
-  const barbers=useMemo(()=>{
+  const customerNames=useMemo(()=>{
     const names=new Set(todayBookings.map(b=>b.name));
-    return[...names];
+    return[...names].sort((a,b)=>a.localeCompare(b,"pt-BR"));
   },[todayBookings]);
 
   const filteredBookings=useMemo(()=>{
@@ -58,25 +64,18 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
     return todayBookings.filter(b=>b.name===activeFilter);
   },[todayBookings,activeFilter]);
 
-  const nowMarkerIndex=filteredBookings.findIndex(b=>b.start>now);
-  const showNowMarker=selectedDate===todayStr();
+  const {visible:visibleBookings,hiddenCount}=agendaHistory(filteredBookings,today,now,expandedHistory);
+  const nowMarkerIndex=visibleBookings.findIndex(b=>b.start>now);
+  const showNowMarker=selectedDate===today;
   const nowMarker=<div className="tl-now-marker"><div className="tl-now-line"/><div className="tl-now-badge"><span className="tl-now-dot"/>AGORA • {time(now)}</div><div className="tl-now-line"/></div>;
 
   const nextBooking=useMemo(()=>{
-    return todayBookings.find(b=>b.start>now&&b.status!=="finalizado"&&b.status!=="cancelado"&&b.status!=="nao_compareceu");
-  },[todayBookings,now]);
+    return filteredBookings.find(b=>(selectedDate>today||(selectedDate===today&&b.start>now))&&b.status!=="finalizado"&&b.status!=="cancelado"&&b.status!=="nao_compareceu");
+  },[filteredBookings,selectedDate,today,now]);
 
   const currentBooking=useMemo(()=>{
-    return todayBookings.find(b=>b.start<=now&&b.end>now&&b.status!=="finalizado"&&b.status!=="cancelado"&&b.status!=="nao_compareceu");
-  },[todayBookings,now]);
-
-  const timeMarkers=useMemo(()=>{
-    if(filteredBookings.length===0)return[];
-    const markers=new Set<number>();
-    filteredBookings.forEach(b=>{markers.add(b.start);markers.add(b.end)});
-    markers.add(now);
-    return[...markers].sort((a,b)=>a-b);
-  },[filteredBookings,now]);
+    return filteredBookings.find(b=>selectedDate===today&&b.start<=now&&b.end>now&&b.status!=="finalizado"&&b.status!=="cancelado"&&b.status!=="nao_compareceu");
+  },[filteredBookings,selectedDate,today,now]);
 
   const loadCustomer=useCallback(async(phone:string)=>{
     setLoadingDetail(true);
@@ -102,10 +101,12 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
     if(detailBooking)loadCustomer(detailBooking.phone);
   },[detailBooking,loadCustomer]);
 
+  const changeDate=(date:string)=>{setSelectedDate(date);setActiveFilter(null);setExpandedHistory(false);setFilterOpen(false)};
+  const chooseCustomer=(name:string|null)=>{setActiveFilter(name);setExpandedHistory(false);setFilterOpen(false)};
   const navigateDate=(offset:number)=>{
     const d=new Date(selectedDate+"T12:00:00");
     d.setDate(d.getDate()+offset);
-    setSelectedDate(d.toISOString().slice(0,10));
+    changeDate(d.toISOString().slice(0,10));
   };
 
   const openWhatsApp=(phone:string)=>{
@@ -118,18 +119,36 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
       <div className="tl-header">
         <div className="tl-header-top">
           <div className="tl-title-block">
-            <h2 className="tl-title">Agenda de Hoje</h2>
+            <h2 className="tl-title">{agendaTitle(selectedDate,today)}</h2>
             <p className="tl-date">{longDateBR(selectedDate)}</p>
           </div>
           <div className="tl-nav">
-            <Button variant="outline" size="sm" className="tl-nav-btn" onClick={()=>setSelectedDate(todayStr())} disabled={selectedDate===todayStr()}>Hoje</Button>
+            <Button variant="outline" size="sm" className="tl-nav-btn" onClick={()=>changeDate(today)} disabled={selectedDate===today}>Hoje</Button>
             <Button variant="ghost" size="sm" className="tl-nav-btn" onClick={()=>navigateDate(-1)}><ChevronLeft size={16}/></Button>
             <Button variant="ghost" size="sm" className="tl-nav-btn" onClick={()=>navigateDate(1)}><ChevronRight size={16}/></Button>
           </div>
         </div>
-        {barbers.length>0&&<div className="tl-filters">
-          <button className={"tl-filter"+(!activeFilter?" active":"")} onClick={()=>setActiveFilter(null)}>Todos</button>
-          {barbers.map(b=><button key={b} className={"tl-filter"+(activeFilter===b?" active":"")} onClick={()=>setActiveFilter(activeFilter===b?null:b)}>{b}</button>)}
+        {customerNames.length>0&&<div className="tl-customer-filter">
+          <label id="agenda-customer-label">Filtrar por cliente</label>
+          <Popover open={filterOpen} onOpenChange={setFilterOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-full justify-between" aria-labelledby="agenda-customer-label agenda-customer-value">
+                <span id="agenda-customer-value" className="truncate">{activeFilter||"Todos os clientes"}</span><ChevronsUpDown size={16}/>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-0">
+              <Command>
+                <CommandInput placeholder="Digite o nome do cliente..." aria-label="Buscar cliente por nome"/>
+                <CommandList>
+                  <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem value="all-customers" keywords={["Todos os clientes"]} onSelect={()=>chooseCustomer(null)}>Todos os clientes{!activeFilter&&<Check className="ml-auto"/>}</CommandItem>
+                    {customerNames.map(name=><CommandItem key={name} value={"customer:"+name} keywords={[name]} onSelect={()=>chooseCustomer(name)}>{name}{activeFilter===name&&<Check className="ml-auto"/>}</CommandItem>)}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>}
       </div>
 
@@ -143,7 +162,7 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
               <div className="tl-next-service">{nextBooking.service} • {(services.find(s=>s.id===nextBooking.service)?.duration)||30} min</div>
               <div className="tl-next-barber">Barbeiro: {nextBooking.barber==="qualquer"?"Qualquer disponível":nextBooking.barber}</div>
             </div>
-            {minutesUntil(nextBooking.start)&&<div className="tl-next-countdown">Faltam {minutesUntil(nextBooking.start)}</div>}
+            {selectedDate===today&&minutesUntil(nextBooking.start)&&<div className="tl-next-countdown">Faltam {minutesUntil(nextBooking.start)}</div>}
           </div>
         </div>
       )}
@@ -155,12 +174,14 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
         </div>
       ):(
         <div className="tl-timeline">
-          {filteredBookings.map((booking,i)=>{
+          {hiddenCount>0&&<Button variant="outline" className="mb-4 w-full" aria-expanded={expandedHistory} aria-controls="agenda-appointments" onClick={()=>setExpandedHistory(value=>!value)}>{expandedHistory?"Ver menos":`Ver mais (${hiddenCount} anteriores)`}</Button>}
+          <div id="agenda-appointments">
+          {visibleBookings.map((booking,i)=>{
             const status=getStatus(booking.status);
             const cfg=STATUS_CONFIG[status];
-            const isPast=booking.end<=now;
+            const isPast=isPastAppointment(booking,today,now);
             const isCurrent=currentBooking?.id===booking.id;
-            const isFuture=booking.start>now;
+            const isFuture=booking.date>today||(booking.date===today&&booking.start>now);
             const svc=services.find(s=>s.id===booking.service);
             const duration=svc?.duration||(booking.end-booking.start);
             return(
@@ -173,7 +194,7 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
                   </div>
                   <div className="tl-marker-col">
                     <div className={"tl-marker "+status} style={{borderColor:cfg.color,backgroundColor:isCurrent?cfg.color:cfg.bg}}/>
-                    {i<filteredBookings.length-1&&<div className="tl-line"/>}
+                    {i<visibleBookings.length-1&&<div className="tl-line"/>}
                   </div>
                   <div className={"tl-card"+(isCurrent?" current":"")+(isPast?" past":"")} onClick={()=>setDetailBooking(booking)}>
                     <div className="tl-card-header">
@@ -206,6 +227,7 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
             );
           })}
           {showNowMarker&&nowMarkerIndex===-1&&nowMarker}
+          </div>
         </div>
       )}
 
@@ -223,7 +245,7 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
                     {(()=>{const I=STATUS_CONFIG[getStatus(detailBooking.status)].icon;return<I size={13}/>})()}
                     {STATUS_CONFIG[getStatus(detailBooking.status)].label}
                   </Badge>
-                  {minutesUntil(detailBooking.start)&&<span className="tl-drawer-countdown">Faltam {minutesUntil(detailBooking.start)}</span>}
+                  {detailBooking.date===today&&minutesUntil(detailBooking.start)&&<span className="tl-drawer-countdown">Faltam {minutesUntil(detailBooking.start)}</span>}
                 </div>
 
                 <div className="tl-drawer-section">
