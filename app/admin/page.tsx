@@ -7,10 +7,11 @@ import {PhoneInput} from "@/components/phone-input";
 import {formatPhone} from "@/lib/phone";
 import {minutes,time,today,weekdays,type Block,type BlockedPhone,type DayHours,type Period,type Service,type SiteConfig} from "@/lib/booking";
 
-type Dashboard=SiteConfig&{username:string,blocks:Block[],blockedPhones:BlockedPhone[]};
-type Tab="contato"|"horarios"|"servicos"|"ausencias"|"bloqueios"|"senha";
+type Booking={id:string,date:string,start:number,end:number,service:string,name:string,phone:string,color:string};
+type Dashboard=SiteConfig&{username:string,blocks:Booking[],blockedPhones:BlockedPhone[],bookings:Booking[],serviceColors:(id:string)=>string};
+type Tab="contato"|"horarios"|"servicos"|"ausencias"|"bloqueios"|"senha"|"agenda";
 type Ctx={data:Dashboard,onData:(data:Dashboard)=>void,onExpired:()=>void};
-const tabs:{id:Tab,label:string,Icon:typeof Clock}[]=[{id:"contato",label:"Contato",Icon:Phone},{id:"horarios",label:"Horário de funcionamento",Icon:Clock},{id:"servicos",label:"Serviços e valores",Icon:Scissors},{id:"ausencias",label:"Ausências",Icon:CalendarOff},{id:"bloqueios",label:"Telefones bloqueados",Icon:Ban},{id:"senha",label:"Alterar senha",Icon:KeyRound}];
+const tabs:{id:Tab,label:string,Icon:typeof Clock}[]=[{id:"contato",label:"Contato",Icon:Phone},{id:"horarios",label:"Horário de funcionamento",Icon:Clock},{id:"servicos",label:"Serviços e valores",Icon:Scissors},{id:"ausencias",label:"Ausências",Icon:CalendarOff},{id:"bloqueios",label:"Telefones bloqueados",Icon:Ban},{id:"senha",label:"Alterar senha",Icon:KeyRound},{id:"agenda",label:"Agenda",Icon:Calendar}];
 const dayOrder=[1,2,3,4,5,6,0];
 const maxDate=()=>new Date(Date.now()+89*86400000).toISOString().slice(0,10);
 const longDate=(date:string)=>new Date(date+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"});
@@ -153,7 +154,22 @@ function BlockedPhonesTab(ctx:Ctx){
  </div>;
 }
 
-function PasswordTab(ctx:Ctx){
+function AgendaTab(ctx:Ctx){
+  const action=useAction(ctx);
+  const bookings=ctx.data.bookings||[];
+  const getColor=(serviceId:string)=>ctx.serviceColors(serviceId)||"210";
+  const bookingRows=bookings.map((b)=>({...b,color:getColor(b.service)}));
+  return <div className="admin-form">
+   <Heading title="Agenda" text="Visualização da agenda de atendimentos com clientes, horários e serviços. Cores diferenciam os serviços."/>
+   <div className="booking-list">{bookingRows.length===0?<p className="admin-empty">Nenhum agendamento encontrado.</p>:<ul className="booking-list-grid">{bookingRows.map((b)=><li key={b.id} className="booking-item">
+    <div className="booking-color-block" style={{backgroundColor:`hsl(${b.color}, 70%, 60%)`} as React.CSSProperties}/><div className="booking-info">
+     <strong>{b.name}</strong><span>{time(b.start)} – ${time(b.end)}</span><span>{b.service||"Serviço"}</span>
+    </div></li>)}</ul>}</div>
+   <Feedback action={action}/>
+  </div>
+ }
+
+ function PasswordTab(ctx:Ctx){
  const action=useAction(ctx);
  const [current,setCurrent]=useState(""),[next,setNext]=useState(""),[confirm,setConfirm]=useState("");
  async function save(e:React.FormEvent){
@@ -205,7 +221,7 @@ export default function Admin(){
   {status==="login"&&<Login onSuccess={load}/>}
   {status==="ready"&&ctx&&<><div className="intro"><p className="eyebrow">PAINEL ADMINISTRATIVO</p><h1>GERENCIAR BARBEARIA<span>.</span></h1></div>
   <div className="workspace admin-workspace"><section className="booking-panel"><div className="panel-body">
-   {tab==="contato"&&<ContactTab {...ctx}/>}{tab==="horarios"&&<HoursTab {...ctx}/>}{tab==="servicos"&&<ServicesTab {...ctx}/>}{tab==="ausencias"&&<BlocksTab {...ctx}/>}{tab==="bloqueios"&&<BlockedPhonesTab {...ctx}/>}{tab==="senha"&&<PasswordTab {...ctx}/>}
+   {tab==="contato"&&<ContactTab {...ctx}/>}{tab==="horarios"&&<HoursTab {...ctx}/>}{tab==="servicos"&&<ServicesTab {...ctx}/>}{tab==="ausencias"&&<BlocksTab {...ctx}/>}{tab==="bloqueios"&&<BlockedPhonesTab {...ctx}/>}{tab==="senha"&&<PasswordTab {...ctx}/>}{tab==="agenda"&&<AgendaTab {...ctx}/>}
   </div></section>
   <aside><div className="admin-tabs">{tabs.map(({id,label,Icon})=><button key={id} type="button" className={tab===id?"current":""} aria-pressed={tab===id} onClick={()=>setTab(id)}><Icon size={17}/>{label}<ChevronRight size={15}/></button>)}</div><p className="admin-user">Conectado como <strong>{ctx.data.username}</strong>. As alterações aparecem imediatamente no site.</p></aside></div></>}
  </main>

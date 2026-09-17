@@ -8,7 +8,7 @@ Não é necessário instalar o SDK do Supabase nem configurar chaves `anon`,
 Conexão conferida no painel em 16/09/2026:
 
 ```dotenv
-DATABASE_URL=postgresql://postgres.omqrhmjfgitzpifsqqpb:ENCODED_DATABASE_PASSWORD@aws-0-us-east-2.pooler.supabase.com:5432/postgres?sslmode=verify-full
+DATABASE_URL=...
 DATABASE_SCHEMA=sharprazors
 ```
 

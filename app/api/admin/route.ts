@@ -10,14 +10,24 @@ const fail=(error:string,status=400)=>Response.json({error},{status,headers:noSt
 const ok=(data:object,headers:Record<string,string>={})=>Response.json(data,{headers:{...noStore,...headers}});
 const setting=(key:string,value:string)=>db().prepare("INSERT INTO settings (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind(key,value);
 
+const serviceColors:Record<string,string>={};
+function getServiceColor(serviceId:string){
+  if(!serviceColors[serviceId]){
+    const hues=["210","270","140","340","30"];
+    serviceColors[serviceId]=hues[Math.floor(Math.random()*hues.length)];
+  }
+  return serviceColors[serviceId];
+}
+
 async function dashboard(username:string){
-  const [config,blocks,blockedPhones]=await Promise.all([
+  const [config,blocks,blockedPhones,bookings]=await Promise.all([
     loadConfig(),
     db().prepare('SELECT id,date,start,"end",reason FROM schedule_blocks WHERE date >= ? ORDER BY date,start').bind(today()).all<Block>(),
-    db().prepare('SELECT phone,reason,created_at AS "createdAt" FROM blocked_phones ORDER BY created_at DESC').all<BlockedPhone>()
+    db().prepare('SELECT phone,reason,created_at AS "createdAt" FROM blocked_phones ORDER BY created_at DESC').all<BlockedPhone>(),
+    db().prepare('SELECT id,date,start,end,service,name,phone FROM bookings ORDER BY date,start').all()
   ]);
-  return {username,...config,blocks:blocks.results,blockedPhones:blockedPhones.results};
-}
+  const services=config.services||[];
+  return {username,...config,blocks:blocks.results,blockedPhones:blockedPhones.results,bookings:bookings.results,serviceColors:getServiceColor};
 
 export async function GET(req:Request){
   try{
