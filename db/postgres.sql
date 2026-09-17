@@ -14,6 +14,13 @@ CREATE TABLE IF NOT EXISTS admin_sessions (token_hash text PRIMARY KEY, username
 -- Add status column to bookings if missing (idempotent for existing databases).
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'agendado';
 UPDATE bookings SET status='agendado' WHERE status IS NULL;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS barber text NOT NULL DEFAULT 'qualquer';
+
+-- Barbers table
+CREATE TABLE IF NOT EXISTS barbers (id text PRIMARY KEY, name text NOT NULL, active integer NOT NULL DEFAULT 1, position integer NOT NULL DEFAULT 0, created_at text NOT NULL);
+INSERT INTO barbers (id, name, active, position, created_at) VALUES
+  ('qualquer', 'Qualquer disponível', 1, 0, '2026-09-17T00:00:00.000Z')
+ON CONFLICT (id) DO NOTHING;
 
 -- Defaults for a new database only; existing rows (including ones edited in /admin) are never overwritten.
 INSERT INTO services (id, name, duration, price_cents, position, active) VALUES

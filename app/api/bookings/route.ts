@@ -24,9 +24,10 @@ export async function POST(req: Request) {
     if (name.length < 3 || name.length > 100)
       return Response.json({ error: "Informe seu nome para registrar este telefone.", code: "NAME_REQUIRED" }, { status: 400 });
     const id = crypto.randomUUID(), end = start + service.duration, now = new Date().toISOString();
+    const barber = typeof body?.barber === "string" && body.barber ? body.barber : "qualquer";
     const results = await db().batch([
-      db().prepare('INSERT INTO bookings (id,date,start,"end",service,name,phone,created_at) SELECT ?,?,CAST(? AS INTEGER),CAST(? AS INTEGER),?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM bookings WHERE date=? AND start < ? AND "end" > ?)')
-        .bind(id, date, start, end, service.id, name, phone, now, date, end, start),
+      db().prepare('INSERT INTO bookings (id,date,start,"end",service,name,phone,barber,created_at) SELECT ?,?,CAST(? AS INTEGER),CAST(? AS INTEGER),?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM bookings WHERE date=? AND start < ? AND "end" > ?)')
+        .bind(id, date, start, end, service.id, name, phone, barber, now, date, end, start),
       db().prepare("INSERT INTO customers (phone,name,created_at) SELECT phone,name,created_at FROM bookings WHERE id=? ON CONFLICT(phone) DO NOTHING").bind(id)
     ]);
     if (!results[0].meta.changes)

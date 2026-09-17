@@ -1,6 +1,6 @@
 "use client";
 import {useEffect,useState} from "react";
-import {ArrowRight,Ban,Calendar,CalendarOff,Check,ChevronDown,ChevronRight,ChevronUp,Clock,KeyRound,LogOut,Phone,Plus,Scissors,Trash2} from "lucide-react";
+import {ArrowRight,Ban,Calendar,CalendarOff,Check,ChevronDown,ChevronRight,ChevronUp,Clock,KeyRound,LogOut,Phone,Plus,Scissors,Trash2,Users,UserCheck,UserX} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {PhoneInput} from "@/components/phone-input";
@@ -8,11 +8,12 @@ import {formatPhone} from "@/lib/phone";
 import {minutes,time,today,weekdays,type Block,type BlockedPhone,type DayHours,type Period,type Service,type SiteConfig} from "@/lib/booking";
 import {AgendaTimeline} from "@/components/admin/agenda-timeline";
 
-type Booking={id:string,date:string,start:number,end:number,service:string,name:string,phone:string,status:string};
-type Dashboard=SiteConfig&{username:string,blocks:Booking[],blockedPhones:BlockedPhone[],bookings:Booking[],serviceColors:Record<string,string>};
-type Tab="contato"|"horarios"|"servicos"|"ausencias"|"bloqueios"|"senha"|"agenda";
+type Barber={id:string,name:string,active:number,position:number};
+type Booking={id:string,date:string,start:number,end:number,service:string,name:string,phone:string,status:string,barber:string};
+type Dashboard=SiteConfig&{username:string,blocks:Booking[],blockedPhones:BlockedPhone[],bookings:Booking[],barbers:Barber[],serviceColors:Record<string,string>};
+type Tab="contato"|"horarios"|"servicos"|"barbeiros"|"ausencias"|"bloqueios"|"senha"|"agenda";
 type Ctx={data:Dashboard,onData:(data:Dashboard)=>void,onExpired:()=>void};
-const tabs:{id:Tab,label:string,Icon:typeof Clock}[]=[{id:"contato",label:"Contato",Icon:Phone},{id:"horarios",label:"Horário de funcionamento",Icon:Clock},{id:"servicos",label:"Serviços e valores",Icon:Scissors},{id:"ausencias",label:"Ausências",Icon:CalendarOff},{id:"bloqueios",label:"Telefones bloqueados",Icon:Ban},{id:"senha",label:"Alterar senha",Icon:KeyRound},{id:"agenda",label:"Agenda",Icon:Calendar}];
+const tabs:{id:Tab,label:string,Icon:typeof Clock}[]=[{id:"contato",label:"Contato",Icon:Phone},{id:"horarios",label:"Horário de funcionamento",Icon:Clock},{id:"servicos",label:"Serviços e valores",Icon:Scissors},{id:"barbeiros",label:"Barbeiros",Icon:Users},{id:"ausencias",label:"Ausências",Icon:CalendarOff},{id:"bloqueios",label:"Telefones bloqueados",Icon:Ban},{id:"senha",label:"Alterar senha",Icon:KeyRound},{id:"agenda",label:"Agenda",Icon:Calendar}];
 const dayOrder=[1,2,3,4,5,6,0];
 const maxDate=()=>new Date(Date.now()+89*86400000).toISOString().slice(0,10);
 const longDate=(date:string)=>new Date(date+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"});
@@ -159,6 +160,36 @@ function AgendaTab(ctx:Ctx){
   return <AgendaTimeline bookings={ctx.data.bookings||[]} services={ctx.data.services} onData={ctx.onData}/>
  }
 
+function BarbeirosTab(ctx:Ctx){
+  const action=useAction(ctx);
+  const [newName,setNewName]=useState("");
+  const barbers=ctx.data.barbers||[];
+  async function add(e:React.FormEvent){
+   e.preventDefault();
+   if(await action.run({action:"addBarber",name:newName},"Barbeiro cadastrado.")){setNewName("")}
+  }
+  return <div className="admin-form">
+   <Heading title="Barbeiros" text="Gerencie os profissionais que atendem na barbearia. Barbeiros inativos não aparecem para os clientes no agendamento."/>
+   <form className="block-form" onSubmit={add}>
+    <div className="admin-field"><label htmlFor="barber-name">Nome do barbeiro</label><Input id="barber-name" placeholder="Ex.: Carlos" required minLength={2} maxLength={60} value={newName} onChange={e=>setNewName(e.target.value)}/></div>
+    <div className="wide"><Button type="submit" className="primary" disabled={action.busy}>{action.busy?"Salvando…":"Adicionar barbeiro"}<Plus size={18}/></Button></div>
+   </form>
+   <Feedback action={action}/>
+   <h3 className="admin-subtitle">Barbeiros cadastrados ({barbers.length})</h3>
+   {barbers.length===0?<p className="admin-empty">Nenhum barbeiro cadastrado.</p>:<ul className="block-list">{barbers.map(b=><li key={b.id}>
+    <div style={{opacity:b.active?1:.5}}>
+     <strong>{b.name}</strong>
+     <span>{b.active?"Ativo":"Inativo"}{b.id==="qualquer"?" · Padrão":""}</span>
+    </div>
+    <div className="service-actions">
+     {b.id!=="qualquer"&&<button type="button" className="text-button" disabled={action.busy} onClick={()=>action.run({action:"editBarber",id:b.id,name:b.name},"Barbeiro atualizado.")} aria-label={`Editar ${b.name}`}>Editar</button>}
+     {b.id!=="qualquer"&&<button type="button" className="text-button" disabled={action.busy} onClick={()=>action.run({action:"toggleBarber",id:b.id},b.active?"Barbeiro inativado.":"Barbeiro ativado.")} aria-label={b.active?`Inativar ${b.name}`:`Ativar ${b.name}`}>{b.active?<><UserX size={14}/>Inativar</>:<><UserCheck size={14}/>Ativar</>}</button>}
+     {b.id!=="qualquer"&&<button type="button" className="icon-button" disabled={action.busy} onClick={()=>action.run({action:"deleteBarber",id:b.id},"Barbeiro removido.")} aria-label={`Remover ${b.name}`}><Trash2 size={16}/></button>}
+    </div>
+   </li>)}</ul>}
+  </div>;
+ }
+
  function PasswordTab(ctx:Ctx){
  const action=useAction(ctx);
  const [current,setCurrent]=useState(""),[next,setNext]=useState(""),[confirm,setConfirm]=useState("");
@@ -211,7 +242,7 @@ export default function Admin(){
   {status==="login"&&<Login onSuccess={load}/>}
   {status==="ready"&&ctx&&<><div className="intro"><p className="eyebrow">PAINEL ADMINISTRATIVO</p><h1>GERENCIAR BARBEARIA<span>.</span></h1></div>
   <div className="workspace admin-workspace"><section className="booking-panel"><div className="panel-body">
-   {tab==="contato"&&<ContactTab {...ctx}/>}{tab==="horarios"&&<HoursTab {...ctx}/>}{tab==="servicos"&&<ServicesTab {...ctx}/>}{tab==="ausencias"&&<BlocksTab {...ctx}/>}{tab==="bloqueios"&&<BlockedPhonesTab {...ctx}/>}{tab==="senha"&&<PasswordTab {...ctx}/>}{tab==="agenda"&&<AgendaTab {...ctx}/>}
+   {tab==="contato"&&<ContactTab {...ctx}/>}{tab==="horarios"&&<HoursTab {...ctx}/>}{tab==="servicos"&&<ServicesTab {...ctx}/>}{tab==="barbeiros"&&<BarbeirosTab {...ctx}/>}{tab==="ausencias"&&<BlocksTab {...ctx}/>}{tab==="bloqueios"&&<BlockedPhonesTab {...ctx}/>}{tab==="senha"&&<PasswordTab {...ctx}/>}{tab==="agenda"&&<AgendaTab {...ctx}/>}
   </div></section>
   <aside><div className="admin-tabs">{tabs.map(({id,label,Icon})=><button key={id} type="button" className={tab===id?"current":""} aria-pressed={tab===id} onClick={()=>setTab(id)}><Icon size={17}/>{label}<ChevronRight size={15}/></button>)}</div><p className="admin-user">Conectado como <strong>{ctx.data.username}</strong>. As alterações aparecem imediatamente no site.</p></aside></div></>}
  </main>

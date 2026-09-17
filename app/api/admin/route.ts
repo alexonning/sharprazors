@@ -18,14 +18,15 @@ function buildServiceColors(services:{id:string}[]):Record<string,string>{
 }
 
 async function dashboard(username:string){
-  const [config,blocks,blockedPhones,bookings]=await Promise.all([
+  const [config,blocks,blockedPhones,bookings,barbers]=await Promise.all([
     loadConfig(),
     db().prepare('SELECT id,date,start,"end",reason FROM schedule_blocks WHERE date >= ? ORDER BY date,start').bind(today()).all<Block>(),
     db().prepare('SELECT phone,reason,created_at AS "createdAt" FROM blocked_phones ORDER BY created_at DESC').all<BlockedPhone>(),
-    db().prepare('SELECT id,date,start,"end",service,name,phone,status FROM bookings ORDER BY date,start').all()
+    db().prepare('SELECT id,date,start,"end",service,name,phone,status,barber FROM bookings ORDER BY date,start').all(),
+    db().prepare('SELECT id,name,active,position FROM barbers ORDER BY position,name').all()
   ]);
   const services=config.services||[];
-  return {username,...config,blocks:blocks.results,blockedPhones:blockedPhones.results,bookings:bookings.results,serviceColors:buildServiceColors(services)};
+  return {username,...config,blocks:blocks.results,blockedPhones:blockedPhones.results,bookings:bookings.results,barbers:barbers.results,serviceColors:buildServiceColors(services)};
 }
 
 export async function GET(req:Request){
@@ -128,6 +129,31 @@ export async function POST(req:Request){
         const newStatus=typeof body.status==="string"?body.status:"";
         if(!validStatuses.includes(newStatus))return fail("Status inválido.");
         await db().prepare("UPDATE bookings SET status=? WHERE id=?").bind(newStatus,body.id).run();
+        break;
+      }
+      case "addBarber":{
+        const barberName=typeof body.name==="string"?body.name.trim().replace(/\s+/g," "):"";
+        if(barberName.length<2||barberName.length>60)return fail("Nome do barbeiro deve ter entre 2 e 60 caracteres.");
+        const id=barberName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")+"-"+Date.now();
+        const maxPos=(await db().prepare("SELECT COALESCE(MAX(position),0) AS p FROM barbers").first<{p:number}>())?.p??0;
+        await db().prepare("INSERT INTO barbers (id,name,active,position,created_at) VALUES (?,?,1,?,?)").bind(id,barberName,maxPos+1,new Date().toISOString()).run();
+        break;
+      }
+      case "editBarber":{
+        if(typeof body.id!=="string"||body.id==="qualquer")return fail("Barbeiro inválido.");
+        const editName=typeof body.name==="string"?body.name.trim().replace(/\s+/g," "):"";
+        if(editName.length<2||editName.length>60)return fail("Nome do barbeiro deve ter entre 2 e 60 caracteres.");
+        await db().prepare("UPDATE barbers SET name=? WHERE id=?").bind(editName,body.id).run();
+        break;
+      }
+      case "toggleBarber":{
+        if(typeof body.id!=="string"||body.id==="qualquer")return fail("Barbeiro inválido.");
+        await db().prepare("UPDATE barbers SET active=CASE WHEN active=1 THEN 0 ELSE 1 END WHERE id=?").bind(body.id).run();
+        break;
+      }
+      case "deleteBarber":{
+        if(typeof body.id!=="string"||body.id==="qualquer")return fail("Barbeiro inválido.");
+        await db().prepare("DELETE FROM barbers WHERE id=? AND id<>'qualquer'").bind(body.id).run();
         break;
       }
       default:

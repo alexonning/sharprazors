@@ -8,7 +8,7 @@ import {Sheet,SheetContent,SheetHeader,SheetTitle,SheetDescription} from "@/comp
 import {ScrollArea} from "@/components/ui/scroll-area";
 import {time,price,type Service} from "@/lib/booking";
 
-type Booking={id:string,date:string,start:number,end:number,service:string,name:string,phone:string,status:string,color:string};
+type Booking={id:string,date:string,start:number,end:number,service:string,name:string,phone:string,status:string,barber:string};
 type CustomerDetail={phone:string,name:string,createdAt:string|null,totalVisits:number,totalSpent:number,lastService:string|null,lastVisit:string|null,history:any[]};
 type StatusKey="agendado"|"confirmado"|"em_atendimento"|"finalizado"|"cancelado"|"nao_compareceu";
 const STATUS_CONFIG:Record<StatusKey,{label:string;color:string,bg:string,icon:any}>={
@@ -137,7 +137,7 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
             <div className="tl-next-info">
               <div className="tl-next-name">{nextBooking.name}</div>
               <div className="tl-next-service">{nextBooking.service} • {(services.find(s=>s.id===nextBooking.service)?.duration)||30} min</div>
-              <div className="tl-next-barber">Barbeiro: {nextBooking.name}</div>
+              <div className="tl-next-barber">Barbeiro: {nextBooking.barber==="qualquer"?"Qualquer disponível":nextBooking.barber}</div>
             </div>
             {minutesUntil(nextBooking.start)&&<div className="tl-next-countdown">Faltam {minutesUntil(nextBooking.start)}</div>}
           </div>
@@ -187,6 +187,10 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
                           <span className="tl-card-dot">•</span>
                           <Timer size={13}/>
                           <span>{duration} min</span>
+                        </div>
+                        <div className="tl-card-barber">
+                          <User size={12}/>
+                          <span>{booking.barber==="qualquer"?"Qualquer disponível":booking.barber}</span>
                         </div>
                       </div>
                       <Badge className={"tl-badge "+status} style={{backgroundColor:cfg.bg,color:cfg.color,borderColor:cfg.color+"33"}}>{cfg.label}</Badge>
@@ -247,6 +251,7 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
                     <div className="tl-drawer-field"><span className="tl-drawer-label">Data</span><span>{relativeDate(detailBooking.date)}</span></div>
                     <div className="tl-drawer-field"><span className="tl-drawer-label">Horário</span><span>{time(detailBooking.start)} – {time(detailBooking.end)}</span></div>
                     <div className="tl-drawer-field"><span className="tl-drawer-label">Serviço</span><span>{detailBooking.service}</span></div>
+                    <div className="tl-drawer-field"><span className="tl-drawer-label">Barbeiro</span><span>{detailBooking.barber==="qualquer"?"Qualquer disponível":detailBooking.barber}</span></div>
                     <div className="tl-drawer-field"><span className="tl-drawer-label">Duração</span><span>{(services.find(s=>s.id===detailBooking.service)?.duration)||(detailBooking.end-detailBooking.start)} min</span></div>
                     <div className="tl-drawer-field"><span className="tl-drawer-label">Valor</span><span>{price(services.find(s=>s.id===detailBooking.service)?.priceCents??null)}</span></div>
                     <div className="tl-drawer-field"><span className="tl-drawer-label">Telefone</span><span>{detailBooking.phone}</span></div>
