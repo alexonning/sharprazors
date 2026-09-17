@@ -4,6 +4,7 @@ import {ArrowRight,Ban,Calendar,CalendarOff,Check,ChevronDown,ChevronRight,Chevr
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {PhoneInput} from "@/components/phone-input";
+import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogFooter,DialogClose} from "@/components/ui/dialog";
 import {formatPhone} from "@/lib/phone";
 import {minutes,time,today,weekdays,type Block,type BlockedPhone,type DayHours,type Period,type Service,type SiteConfig} from "@/lib/booking";
 import {AgendaTimeline} from "@/components/admin/agenda-timeline";
@@ -163,10 +164,17 @@ function AgendaTab(ctx:Ctx){
 function BarbeirosTab(ctx:Ctx){
   const action=useAction(ctx);
   const [newName,setNewName]=useState("");
+  const [editId,setEditId]=useState<string|null>(null);
+  const [editName,setEditName]=useState("");
   const barbers=ctx.data.barbers||[];
   async function add(e:React.FormEvent){
    e.preventDefault();
    if(await action.run({action:"addBarber",name:newName},"Barbeiro cadastrado.")){setNewName("")}
+  }
+  async function saveEdit(){
+   if(!editId||!editName.trim())return;
+   await action.run({action:"editBarber",id:editId,name:editName},"Barbeiro atualizado.");
+   setEditId(null);setEditName("");
   }
   return <div className="admin-form">
    <Heading title="Barbeiros" text="Gerencie os profissionais que atendem na barbearia. Barbeiros inativos não aparecem para os clientes no agendamento."/>
@@ -182,11 +190,24 @@ function BarbeirosTab(ctx:Ctx){
      <span>{b.active?"Ativo":"Inativo"}{b.id==="qualquer"?" · Padrão":""}</span>
     </div>
     <div className="service-actions">
-     {b.id!=="qualquer"&&<button type="button" className="text-button" disabled={action.busy} onClick={()=>action.run({action:"editBarber",id:b.id,name:b.name},"Barbeiro atualizado.")} aria-label={`Editar ${b.name}`}>Editar</button>}
+     {b.id!=="qualquer"&&<button type="button" className="text-button" disabled={action.busy} onClick={()=>{setEditId(b.id);setEditName(b.name)}} aria-label={`Editar ${b.name}`}>Editar</button>}
      {b.id!=="qualquer"&&<button type="button" className="text-button" disabled={action.busy} onClick={()=>action.run({action:"toggleBarber",id:b.id},b.active?"Barbeiro inativado.":"Barbeiro ativado.")} aria-label={b.active?`Inativar ${b.name}`:`Ativar ${b.name}`}>{b.active?<><UserX size={14}/>Inativar</>:<><UserCheck size={14}/>Ativar</>}</button>}
      {b.id!=="qualquer"&&<button type="button" className="icon-button" disabled={action.busy} onClick={()=>action.run({action:"deleteBarber",id:b.id},"Barbeiro removido.")} aria-label={`Remover ${b.name}`}><Trash2 size={16}/></button>}
     </div>
    </li>)}</ul>}
+   <Dialog open={!!editId} onOpenChange={(o)=>{if(!o){setEditId(null);setEditName("")}}}>
+    <DialogContent>
+     <DialogHeader><DialogTitle>Editar barbeiro</DialogTitle></DialogHeader>
+     <div className="admin-field" style={{marginTop:16}}>
+      <label htmlFor="edit-barber-name">Nome</label>
+      <Input id="edit-barber-name" value={editName} onChange={e=>setEditName(e.target.value)} minLength={2} maxLength={60} disabled={action.busy}/>
+     </div>
+     <DialogFooter>
+      <DialogClose render={<Button variant="outline" disabled={action.busy}>Cancelar</Button>}/>
+      <Button className="primary" disabled={action.busy||!editName.trim()} onClick={saveEdit}>{action.busy?"Salvando…":"Salvar"}</Button>
+     </DialogFooter>
+    </DialogContent>
+   </Dialog>
   </div>;
  }
 
@@ -226,7 +247,7 @@ function Login({onSuccess}:{onSuccess:()=>void}){
 }
 
 export default function Admin(){
- const [data,setData]=useState<Dashboard|null>(null),[status,setStatus]=useState<"loading"|"login"|"ready"|"error">("loading"),[tab,setTab]=useState<Tab>("contato");
+ const [data,setData]=useState<Dashboard|null>(null),[status,setStatus]=useState<"loading"|"login"|"ready"|"error">("loading"),[tab,setTab]=useState<Tab>("agenda");
  async function load(){
   try{const r=await fetch("/api/admin",{cache:"no-store"});if(r.status===401){setData(null);setStatus("login");return}const d=await r.json() as Dashboard&{error?:string};if(!r.ok)throw Error(d.error);setData(d);setStatus("ready")}
   catch{setStatus("error")}
