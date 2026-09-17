@@ -57,7 +57,7 @@ async function submit(e:React.FormEvent){
 const prettyDate=new Date(date+"T12:00:00").toLocaleDateString("pt-BR",{day:"numeric",month:"long"});
 return <div className="site"><header className="header"><a href="/" className="brand"><img src="/logo.png" alt="Barbearia Sharp Razors"/><span>SHARP RAZORS<small>BARBEARIA</small></span></a><nav><a className="active" href="#agendamento">Agendamento</a><a href="#horarios">Horários</a><a className="nav-location" href="#localizacao">Localização</a>{site?.whatsapp&&<a href={whatsappUrl(site.whatsapp)} target="_blank" rel="noreferrer" aria-label="WhatsApp da barbearia"><WhatsApp size={19}/></a>}<a href="https://www.instagram.com/barbeariasharprazors/" target="_blank" rel="noreferrer" aria-label="Instagram da barbearia"><Instagram size={19}/></a></nav></header>
 <main><div className="intro"><p className="eyebrow">BARBEARIA SHARP RAZORS</p><h1>MARQUE SEU HORÁRIO<span>.</span></h1></div>
-<div className="workspace" id="agendamento"><section className="booking-panel"><div className="steps">{["Serviço","Data e horário","Seus dados"].map((s,i)=><button key={s} disabled={i>step||!!booking||saving} onClick={()=>setStep(i)} className={i===step?"current":i<step?"done":""}><span>{i<step?<Check size={15}/>:"0"+(i+1)}</span>{s}{i<2&&<ChevronRight className="step-chevron" size={15}/>}</button>)}</div>
+<div className="workspace" id="agendamento"><section className="booking-panel"><div className="steps">{["Serviço","Data e horário","Finalizar"].map((s,i)=><button key={s} disabled={i>step||!!booking||saving} onClick={()=>setStep(i)} className={i===step?"current":i<step?"done":""}><span>{i<step?<Check size={15}/>:"0"+(i+1)}</span>{s}{i<2&&<ChevronRight className="step-chevron" size={15}/>}</button>)}</div>
 {booking?<div ref={panelRef} className="success"><div className="success-icon"><Check size={34}/></div><p className="eyebrow">TUDO CERTO</p><h2>Horário reservado!</h2><p>Seu agendamento está registrado.</p><div className="receipt"><strong>{selected?.name}</strong><span>{prettyDate} às {time(slot!)}</span><span>{barbersList.find(b=>b.id===barber)?.name||"Qualquer disponível"} · {selected?.duration} min</span><small>Comprovante: {booking.slice(0,8).toUpperCase()}</small></div><p className="fine">Guarde este comprovante. Para alterações, entre em contato com a barbearia pelo WhatsApp ou Instagram.</p><Button className="primary" onClick={()=>{setBooking(null);setStep(0);setName("");setPhone("");setBarber("qualquer");setCustomerState("unknown");setReload(x=>x+1)}}>Fazer outro agendamento <ArrowRight/></Button></div>:<div ref={panelRef} className="panel-body">
 <div className="section-heading"><p className="eyebrow">ETAPA 0{step+1} DE 03</p><h2>{["O que vai ser hoje?","Escolha o seu horário.","Finalizar."][step]}</h2><p>{["Escolha o serviço para o seu próximo atendimento.","Escolha uma data e um dos horários disponíveis.","Informe seus dados e selecione o barbeiro para confirmar."][step]}</p></div>
 {step===0&&(site?<><RadioGroup value={service} onValueChange={setService} className={"service-list"+(site.services.length>4?" is-scrollable":"")} aria-label="Serviço">{site.services.map((s,i)=><label key={s.id} className={"service-card "+(service===s.id?"selected":"")} htmlFor={"service-"+s.id}><span className="service-number">{String(i+1).padStart(2,"0")}</span><div className="service-copy"><h3>{s.name}</h3><span className="duration"><Clock size={13}/>{s.duration} min <b>·</b> {price(s.priceCents)}</span></div><RadioGroupItem value={s.id} id={"service-"+s.id}/></label>)}</RadioGroup><div className="quiet-note"><ShieldCheck size={17}/> O valor do serviço é confirmado com a barbearia.</div></>:<p className="loading-note" role={siteError?"alert":undefined}>{siteError||"Carregando serviços…"}</p>)}
@@ -71,11 +71,12 @@ return <div className="site"><header className="header"><a href="/" className="b
 {customerState==="new"&&<div className="new-customer"><p>Primeira vez com este telefone? Informe seu nome para o cadastro.</p><label htmlFor="name">Nome completo</label><Input id="name" autoComplete="name" placeholder="Seu nome completo" required minLength={3} maxLength={100} disabled={saving} value={name} onChange={e=>setName(e.target.value)}/></div>}
 </div>
 <div className="barber-field">
-<label>Barbeiro</label>
-<Select value={barber} onValueChange={setBarber}>
-<SelectTrigger className="w-full"><SelectValue placeholder="Selecione o barbeiro"/></SelectTrigger>
+<label htmlFor="booking-barber">Barbeiro</label>
+<Select value={barber} onValueChange={setBarber} disabled={saving}>
+<SelectTrigger id="booking-barber" className="w-full"><SelectValue placeholder="Selecione o barbeiro"/></SelectTrigger>
 <SelectContent><SelectGroup><SelectLabel>Barbeiros</SelectLabel>
-{barbersList.map((b)=><SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+<SelectItem value="qualquer">Qualquer disponível</SelectItem>
+{barbersList.filter(b=>b.id!=="qualquer").map((b)=><SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
 </SelectGroup></SelectContent>
 </Select>
 </div>

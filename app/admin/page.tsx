@@ -4,7 +4,7 @@ import {ArrowRight,Ban,Calendar,CalendarOff,Check,ChevronDown,ChevronRight,Chevr
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {PhoneInput} from "@/components/phone-input";
-import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogFooter,DialogClose} from "@/components/ui/dialog";
+import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription,DialogFooter,DialogClose} from "@/components/ui/dialog";
 import {formatPhone} from "@/lib/phone";
 import {minutes,time,today,weekdays,type Block,type BlockedPhone,type DayHours,type Period,type Service,type SiteConfig} from "@/lib/booking";
 import {AgendaTimeline} from "@/components/admin/agenda-timeline";
@@ -14,7 +14,7 @@ type Booking={id:string,date:string,start:number,end:number,service:string,name:
 type Dashboard=SiteConfig&{username:string,blocks:Booking[],blockedPhones:BlockedPhone[],bookings:Booking[],barbers:Barber[],serviceColors:Record<string,string>};
 type Tab="contato"|"horarios"|"servicos"|"barbeiros"|"ausencias"|"bloqueios"|"senha"|"agenda";
 type Ctx={data:Dashboard,onData:(data:Dashboard)=>void,onExpired:()=>void};
-const tabs:{id:Tab,label:string,Icon:typeof Clock}[]=[{id:"contato",label:"Contato",Icon:Phone},{id:"horarios",label:"Horário de funcionamento",Icon:Clock},{id:"servicos",label:"Serviços e valores",Icon:Scissors},{id:"barbeiros",label:"Barbeiros",Icon:Users},{id:"ausencias",label:"Ausências",Icon:CalendarOff},{id:"bloqueios",label:"Telefones bloqueados",Icon:Ban},{id:"senha",label:"Alterar senha",Icon:KeyRound},{id:"agenda",label:"Agenda",Icon:Calendar}];
+const tabs:{id:Tab,label:string,Icon:typeof Clock}[]=[{id:"agenda",label:"Agenda",Icon:Calendar},{id:"contato",label:"Contato",Icon:Phone},{id:"horarios",label:"Horário de funcionamento",Icon:Clock},{id:"servicos",label:"Serviços e valores",Icon:Scissors},{id:"barbeiros",label:"Barbeiros",Icon:Users},{id:"ausencias",label:"Ausências",Icon:CalendarOff},{id:"bloqueios",label:"Telefones bloqueados",Icon:Ban},{id:"senha",label:"Alterar senha",Icon:KeyRound}];
 const dayOrder=[1,2,3,4,5,6,0];
 const maxDate=()=>new Date(Date.now()+89*86400000).toISOString().slice(0,10);
 const longDate=(date:string)=>new Date(date+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"});
@@ -171,10 +171,10 @@ function BarbeirosTab(ctx:Ctx){
    e.preventDefault();
    if(await action.run({action:"addBarber",name:newName},"Barbeiro cadastrado.")){setNewName("")}
   }
-  async function saveEdit(){
-   if(!editId||!editName.trim())return;
-   await action.run({action:"editBarber",id:editId,name:editName},"Barbeiro atualizado.");
-   setEditId(null);setEditName("");
+  async function saveEdit(e:React.FormEvent){
+   e.preventDefault();
+   if(action.busy||!editId||editName.trim().length<2)return;
+   if(await action.run({action:"editBarber",id:editId,name:editName.trim()},"Barbeiro atualizado.")){setEditId(null);setEditName("")}
   }
   return <div className="admin-form">
    <Heading title="Barbeiros" text="Gerencie os profissionais que atendem na barbearia. Barbeiros inativos não aparecem para os clientes no agendamento."/>
@@ -195,17 +195,20 @@ function BarbeirosTab(ctx:Ctx){
      {b.id!=="qualquer"&&<button type="button" className="icon-button" disabled={action.busy} onClick={()=>action.run({action:"deleteBarber",id:b.id},"Barbeiro removido.")} aria-label={`Remover ${b.name}`}><Trash2 size={16}/></button>}
     </div>
    </li>)}</ul>}
-   <Dialog open={!!editId} onOpenChange={(o)=>{if(!o){setEditId(null);setEditName("")}}}>
-    <DialogContent>
-     <DialogHeader><DialogTitle>Editar barbeiro</DialogTitle></DialogHeader>
+   <Dialog open={!!editId} onOpenChange={(o)=>{if(!o&&!action.busy){setEditId(null);setEditName("")}}}>
+    <DialogContent showCloseButton={!action.busy}>
+    <form onSubmit={saveEdit} className="grid gap-4">
+     <DialogHeader><DialogTitle>Editar barbeiro</DialogTitle><DialogDescription>Atualize o nome do profissional e salve as alterações.</DialogDescription></DialogHeader>
      <div className="admin-field" style={{marginTop:16}}>
       <label htmlFor="edit-barber-name">Nome</label>
-      <Input id="edit-barber-name" value={editName} onChange={e=>setEditName(e.target.value)} minLength={2} maxLength={60} disabled={action.busy}/>
+      <Input required autoFocus id="edit-barber-name" value={editName} onChange={e=>setEditName(e.target.value)} minLength={2} maxLength={60} disabled={action.busy}/>
      </div>
+     {action.error&&<div className="error" role="alert">{action.error}</div>}
      <DialogFooter>
-      <DialogClose render={<Button variant="outline" disabled={action.busy}>Cancelar</Button>}/>
-      <Button className="primary" disabled={action.busy||!editName.trim()} onClick={saveEdit}>{action.busy?"Salvando…":"Salvar"}</Button>
+      <DialogClose asChild><Button type="button" variant="outline" disabled={action.busy}>Cancelar</Button></DialogClose>
+      <Button type="submit" className="primary" disabled={action.busy||editName.trim().length<2}>{action.busy?"Salvando…":"Salvar"}</Button>
      </DialogFooter>
+    </form>
     </DialogContent>
    </Dialog>
   </div>;
@@ -260,7 +263,7 @@ export default function Admin(){
  <main>
   {status==="loading"&&<p className="loading-note">Carregando painel…</p>}
   {status==="error"&&<div className="error" role="alert">Não foi possível carregar o painel.<button onClick={()=>{setStatus("loading");load()}}>Tentar novamente</button></div>}
-  {status==="login"&&<Login onSuccess={load}/>}
+  {status==="login"&&<Login onSuccess={()=>{setTab("agenda");load()}}/>}
   {status==="ready"&&ctx&&<><div className="intro"><p className="eyebrow">PAINEL ADMINISTRATIVO</p><h1>GERENCIAR BARBEARIA<span>.</span></h1></div>
   <div className="workspace admin-workspace"><section className="booking-panel"><div className="panel-body">
    {tab==="contato"&&<ContactTab {...ctx}/>}{tab==="horarios"&&<HoursTab {...ctx}/>}{tab==="servicos"&&<ServicesTab {...ctx}/>}{tab==="barbeiros"&&<BarbeirosTab {...ctx}/>}{tab==="ausencias"&&<BlocksTab {...ctx}/>}{tab==="bloqueios"&&<BlockedPhonesTab {...ctx}/>}{tab==="senha"&&<PasswordTab {...ctx}/>}{tab==="agenda"&&<AgendaTab {...ctx}/>}

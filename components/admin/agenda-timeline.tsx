@@ -58,6 +58,10 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
     return todayBookings.filter(b=>b.name===activeFilter);
   },[todayBookings,activeFilter]);
 
+  const nowMarkerIndex=filteredBookings.findIndex(b=>b.start>now);
+  const showNowMarker=selectedDate===todayStr();
+  const nowMarker=<div className="tl-now-marker"><div className="tl-now-line"/><div className="tl-now-badge"><span className="tl-now-dot"/>AGORA • {time(now)}</div><div className="tl-now-line"/></div>;
+
   const nextBooking=useMemo(()=>{
     return todayBookings.find(b=>b.start>now&&b.status!=="finalizado"&&b.status!=="cancelado"&&b.status!=="nao_compareceu");
   },[todayBookings,now]);
@@ -159,12 +163,9 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
             const isFuture=booking.start>now;
             const svc=services.find(s=>s.id===booking.service);
             const duration=svc?.duration||(booking.end-booking.start);
-            const nowPos=now;
-            const showNow=nowPos>=booking.start&&nowPos<booking.end;
-            const showNowBefore=nowPos>=booking.end&&(i===filteredBookings.length-1||nowPos<filteredBookings[i+1]?.start);
-            const showNowAfter=nowPos<booking.start&&(i===0||nowPos>=filteredBookings[i-1]?.end);
             return(
               <div key={booking.id} className="tl-item-wrapper">
+                {showNowMarker&&i===nowMarkerIndex&&nowMarker}
                 <div className={"tl-item"+(isPast?" past":"")+(isCurrent?" current":"")+(isFuture?" future":"")}>
                   <div className="tl-time-col">
                     <span className="tl-time">{time(booking.start)}</span>
@@ -201,30 +202,10 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
                     </div>
                   </div>
                 </div>
-                {showNowBefore&&i<filteredBookings.length-1&&(
-                  <div className="tl-now-marker">
-                    <div className="tl-now-line"/>
-                    <div className="tl-now-badge"><span className="tl-now-dot"/>AGORA • {time(now)}</div>
-                    <div className="tl-now-line"/>
-                  </div>
-                )}
-                {i===filteredBookings.length-1&&nowPos>=booking.end&&(
-                  <div className="tl-now-marker">
-                    <div className="tl-now-line"/>
-                    <div className="tl-now-badge"><span className="tl-now-dot"/>AGORA • {time(now)}</div>
-                    <div className="tl-now-line"/>
-                  </div>
-                )}
               </div>
             );
           })}
-          {filteredBookings.length>0&&now<filteredBookings[filteredBookings.length-1].start&&(
-            <div className="tl-now-marker">
-              <div className="tl-now-line"/>
-              <div className="tl-now-badge"><span className="tl-now-dot"/>AGORA • {time(now)}</div>
-              <div className="tl-now-line"/>
-            </div>
-          )}
+          {showNowMarker&&nowMarkerIndex===-1&&nowMarker}
         </div>
       )}
 
