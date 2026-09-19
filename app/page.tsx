@@ -48,7 +48,28 @@ const selectedDuration=selected.reduce((n,s)=>n+s.duration,0);
 const selectedDurationLabel=selectedDuration>=60?`${Math.floor(selectedDuration/60)}h${selectedDuration%60?` ${selectedDuration%60}m`:""}`:`${selectedDuration} min`;
 const selectedPrice=selected.some(s=>s.priceCents===null)?null:selected.reduce((n,s)=>n+(s.priceCents??0),0);
 const serviceKey=service.join(",");
+const autoDateRef=useRef(false);
 useEffect(()=>{if(!selected.length)return;const abort=new AbortController();setLoading(true);setSlot(null);setBarber("qualquer");setAvailability([]);setAvailable([]);setError("");fetch(`/api/bookings?date=${date}&service=${serviceKey}`,{signal:abort.signal}).then(async r=>{const d=await r.json() as {error?:string,slots:number[],availability:{start:number,barbers:AvailableBarber[]}[],barbers:AvailableBarber[]};if(!r.ok)throw Error(d.error);setAvailable(d.slots);setAvailability(d.availability);setBarbersList(d.barbers)}).catch(e=>{if(e.name!=="AbortError"){setError(e.message);setAvailable([])}}).finally(()=>{if(!abort.signal.aborted)setLoading(false)});return()=>abort.abort()},[date,serviceKey,reload,site]);
+  useEffect(()=>{autoDateRef.current=false},[serviceKey,reload]);
+  useEffect(()=>{if(date!==today())autoDateRef.current=false},[date]);
+  useEffect(()=>{
+ if(!selected.length||date!==today()||loading||available.length||autoDateRef.current)return;
+ autoDateRef.current=true;
+ const abort=new AbortController();
+ (async()=>{
+  for(let offset=1;offset<=89;offset++){
+   const candidate=new Date(today()+"T12:00:00");candidate.setDate(candidate.getDate()+offset);
+   const candidateDate=candidate.toISOString().slice(0,10);
+   try{
+    const r=await fetch(`/api/bookings?date=${candidateDate}&service=${serviceKey}`,{signal:abort.signal});
+    const d=await r.json() as {slots?:number[]};
+    if(r.ok&&d.slots?.length){setDate(candidateDate);return;}
+   }catch(e){if((e as Error).name==="AbortError")return;}
+  }
+  autoDateRef.current=false;
+ })();
+ return()=>abort.abort();
+},[available.length,date,loading,selected.length,serviceKey]);
 useEffect(()=>{const context=(document as any).modelContext;if(!site||!context?.registerTool)return;const life=new AbortController();Promise.resolve(context.registerTool({name:"select_booking_service",description:"Seleciona o serviço no formulário, sem criar uma reserva.",inputSchema:{type:"object",properties:{service:{type:"string",enum:site.services.map(s=>s.id)}},required:["service"],additionalProperties:false},annotations:{readOnlyHint:false},execute:async(input:any)=>{if(!site.services.some(s=>s.id===input.service))throw Error("Serviço inválido");setService([input.service]);setStep(0);return {selectedService:input.service}}},{signal:life.signal})).catch(()=>{});return()=>life.abort()},[site]);
 async function submit(e:React.FormEvent){
  e.preventDefault();if(saving)return;setError("");setBlocked(false);setConflict(false);
