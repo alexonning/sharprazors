@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  turbopack: {
+    resolveAlias: { "@/db/runtime": "./db/runtime.node.ts" },
+  },
 };
 
 export default nextConfig;

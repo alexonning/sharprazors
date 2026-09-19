@@ -88,7 +88,7 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
       const r=await fetch("/api/admin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"updateBookingStatus",id,status})});
       if(r.ok){
         const d=await r.json();
-        if(d&&d.bookings)onData(d);
+        if(d&&typeof d==="object"&&"bookings" in d&&Array.isArray(d.bookings))onData(d);
         setDetailBooking(prev=>prev&&prev.id===id?{...prev,status}:prev);
       }
     }catch{}finally{setUpdatingStatus(null)}

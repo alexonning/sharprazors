@@ -42,7 +42,7 @@ useEffect(()=>{
 useEffect(()=>{fetch("/api/site",{cache:"no-store"}).then(async r=>{const d=await r.json() as SiteConfig&{error?:string};if(!r.ok)throw Error(d.error);setSite(d);setService(current=>d.services.some(s=>s.id===current)?current:d.services[0]?.id??"")}).catch(e=>setSiteError((e as Error).message||"Não foi possível carregar os dados da barbearia."))},[]);
 
 const selected=site?.services.find(s=>s.id===service);
-useEffect(()=>{if(!selected)return;const abort=new AbortController();setLoading(true);setSlot(null);setBarber("qualquer");setAvailability([]);setAvailable([]);setError("");fetch(`/api/bookings?date=${date}&service=${service}`,{signal:abort.signal}).then(async r=>{const d=await r.json();if(!r.ok)throw Error(d.error);setAvailable(d.slots);setAvailability(d.availability);setBarbersList(d.barbers)}).catch(e=>{if(e.name!=="AbortError"){setError(e.message);setAvailable([])}}).finally(()=>{if(!abort.signal.aborted)setLoading(false)});return()=>abort.abort()},[date,service,reload,site]);
+useEffect(()=>{if(!selected)return;const abort=new AbortController();setLoading(true);setSlot(null);setBarber("qualquer");setAvailability([]);setAvailable([]);setError("");fetch(`/api/bookings?date=${date}&service=${service}`,{signal:abort.signal}).then(async r=>{const d=await r.json() as {error?:string,slots:number[],availability:{start:number,barbers:AvailableBarber[]}[],barbers:AvailableBarber[]};if(!r.ok)throw Error(d.error);setAvailable(d.slots);setAvailability(d.availability);setBarbersList(d.barbers)}).catch(e=>{if(e.name!=="AbortError"){setError(e.message);setAvailable([])}}).finally(()=>{if(!abort.signal.aborted)setLoading(false)});return()=>abort.abort()},[date,service,reload,site]);
 useEffect(()=>{const context=(document as any).modelContext;if(!site||!context?.registerTool)return;const life=new AbortController();Promise.resolve(context.registerTool({name:"select_booking_service",description:"Seleciona o serviço no formulário, sem criar uma reserva.",inputSchema:{type:"object",properties:{service:{type:"string",enum:site.services.map(s=>s.id)}},required:["service"],additionalProperties:false},annotations:{readOnlyHint:false},execute:async(input:any)=>{if(!site.services.some(s=>s.id===input.service))throw Error("Serviço inválido");setService(input.service);setStep(0);return {selectedService:input.service}}},{signal:life.signal})).catch(()=>{});return()=>life.abort()},[site]);
 async function submit(e:React.FormEvent){
  e.preventDefault();if(saving)return;setError("");setBlocked(false);
@@ -51,11 +51,11 @@ async function submit(e:React.FormEvent){
  try{
   if(customerState==="unknown"){
    const r=await fetch("/api/customers/lookup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone})});
-   const d=await r.json();if(!r.ok){if(d.code==="PHONE_BLOCKED")setBlocked(true);throw Error(d.error)}
+   const d=await r.json() as {code?:string,error?:string,registered:boolean};if(!r.ok){if(d.code==="PHONE_BLOCKED")setBlocked(true);throw Error(d.error)}
    setCustomerState(d.registered?"existing":"new");return;
   }
    const r=await fetch("/api/bookings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({service,date,start:slot,barber,...(customerState==="new"?{name}:{}),phone})});
-  const d=await r.json();if(!r.ok){if(d.code==="NAME_REQUIRED")setCustomerState("new");if(d.code==="PHONE_BLOCKED")setBlocked(true);if(r.status===409){setStep(1);setReload(x=>x+1)}throw Error(d.error)}setBarber(d.barber);setBooking(d.id);
+  const d=await r.json() as {code?:string,error?:string,barber:string,id:string};if(!r.ok){if(d.code==="NAME_REQUIRED")setCustomerState("new");if(d.code==="PHONE_BLOCKED")setBlocked(true);if(r.status===409){setStep(1);setReload(x=>x+1)}throw Error(d.error)}setBarber(d.barber);setBooking(d.id);
  }catch(e){setError((e as Error).message)}finally{setSaving(false)}
 }
 const prettyDate=new Date(date+"T12:00:00").toLocaleDateString("pt-BR",{day:"numeric",month:"long"});

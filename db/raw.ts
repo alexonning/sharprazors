@@ -1,6 +1,6 @@
-import {env} from "cloudflare:workers";
+import {env} from "@/db/runtime";
 import {postgresConfig,openPostgresClient} from "./postgres-config.mjs";
-import supabaseRootCertificate from "./supabase-prod-ca-2021.crt?raw";
+import supabaseRootCertificate from "./supabase-certificate";
 type Row=Record<string,unknown>;
 export type QueryResult<T=Row>={results:T[],meta:{changes:number}};
 export interface Statement{bind(...values:unknown[]):Statement;first<T=Row>():Promise<T|null>;all<T=Row>():Promise<QueryResult<T>>;run():Promise<QueryResult>}

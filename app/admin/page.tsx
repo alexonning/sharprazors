@@ -11,7 +11,7 @@ import {AgendaTimeline} from "@/components/admin/agenda-timeline";
 
 type Barber={id:string,name:string,active:number,position:number};
 type Booking={id:string,date:string,start:number,end:number,service:string,name:string,phone:string,status:string,barber:string};
-type Dashboard=SiteConfig&{username:string,blocks:Booking[],blockedPhones:BlockedPhone[],bookings:Booking[],barbers:Barber[],serviceColors:Record<string,string>};
+type Dashboard=SiteConfig&{username:string,blocks:Block[],blockedPhones:BlockedPhone[],bookings:Booking[],barbers:Barber[],serviceColors:Record<string,string>};
 type Tab="contato"|"horarios"|"servicos"|"barbeiros"|"ausencias"|"bloqueios"|"senha"|"agenda";
 type Ctx={data:Dashboard,onData:(data:Dashboard)=>void,onExpired:()=>void};
 const tabs:{id:Tab,label:string,Icon:typeof Clock}[]=[{id:"agenda",label:"Agenda",Icon:Calendar},{id:"contato",label:"Contato",Icon:Phone},{id:"horarios",label:"Horário de funcionamento",Icon:Clock},{id:"servicos",label:"Serviços e valores",Icon:Scissors},{id:"barbeiros",label:"Barbeiros",Icon:Users},{id:"ausencias",label:"Ausências",Icon:CalendarOff},{id:"bloqueios",label:"Telefones bloqueados",Icon:Ban},{id:"senha",label:"Alterar senha",Icon:KeyRound}];

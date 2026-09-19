@@ -41,7 +41,8 @@ export async function POST(req:Request){
     if(!username)return Response.json({error:"Faça login para continuar."},{status:401});
     const body=await req.json().catch(()=>null);
     if(!body)return Response.json({error:"Dados inválidos."},{status:400});
-    if(body.action==="customerNote"){
+    if(typeof body==="object"&&"action" in body&&body.action==="customerNote"){
+      if(!("phone" in body)||!("note" in body))return Response.json({error:"Dados inválidos."},{status:400});
       if(typeof body.phone!=="string"||typeof body.note!=="string")return Response.json({error:"Dados inválidos."},{status:400});
       const trimmed=body.note.trim().slice(0,500);
       await db().prepare("INSERT INTO customers (phone,name,created_at) SELECT ?,name,created_at FROM bookings WHERE phone=? LIMIT 1 ON CONFLICT(phone) DO NOTHING").bind(body.phone,body.phone).run();

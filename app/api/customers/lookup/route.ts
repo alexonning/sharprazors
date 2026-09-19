@@ -6,7 +6,7 @@ export async function POST(req: Request) {
     return Response.json({ error: "Origem inválida." }, { status: 403 });
   let body;
   try { body = await req.json(); } catch { return Response.json({ error: "Informe um telefone válido." }, { status: 400 }); }
-  const phone = normalizePhone(body?.phone);
+  const phone = normalizePhone(body && typeof body === "object" && "phone" in body ? body.phone : undefined);
   if (!phone) return Response.json({ error: "Informe um telefone brasileiro válido com DDD." }, { status: 400 });
   try {
     if (await isPhoneBlocked(phone)) return Response.json({ error: blockedPhoneError, code: blockedPhoneCode }, { status: 403 });

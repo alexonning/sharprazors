@@ -1,0 +1,10 @@
+.env*
+.dev.vars
+api_key.txt
+.sites-runtime
+.agents
+.codex
+.wrangler
+outputs
+work
+dist
