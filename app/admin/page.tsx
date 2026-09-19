@@ -16,7 +16,7 @@ type CustomerSummary={phone:string,name:string,createdAt:string|null};
 type Dashboard=SiteConfig&{username:string,blocks:Block[],blockedPhones:BlockedPhone[],bookings:Booking[],barbers:Barber[],customers:CustomerSummary[],serviceColors:Record<string,string>};
 type Tab="contato"|"horarios"|"servicos"|"barbeiros"|"ausencias"|"bloqueios"|"senha"|"agenda"|"clientes";
 type Ctx={data:Dashboard,onData:(data:Dashboard)=>void,onExpired:()=>void};
-const tabs:{id:Tab,label:string,Icon:typeof Clock}[]=[{id:"agenda",label:"Agenda",Icon:Calendar},{id:"clientes",label:"Clientes",Icon:UserCheck},{id:"contato",label:"Contato",Icon:Phone},{id:"horarios",label:"Hor�rio de funcionamento",Icon:Clock},{id:"servicos",label:"Servi�os e valores",Icon:Scissors},{id:"barbeiros",label:"Barbeiros",Icon:Users},{id:"ausencias",label:"Aus�ncias",Icon:CalendarOff},{id:"bloqueios",label:"Telefones bloqueados",Icon:Ban},{id:"senha",label:"Alterar senha",Icon:KeyRound}];
+const tabs:{id:Tab,label:string,Icon:typeof Clock}[]=[{id:"agenda",label:"Agenda",Icon:Calendar},{id:"clientes",label:"Clientes",Icon:UserCheck},{id:"contato",label:"Contato",Icon:Phone},{id:"horarios",label:"Horário de funcionamento",Icon:Clock},{id:"servicos",label:"Serviços e valores",Icon:Scissors},{id:"barbeiros",label:"Barbeiros",Icon:Users},{id:"ausencias",label:"Ausências",Icon:CalendarOff},{id:"bloqueios",label:"Telefones bloqueados",Icon:Ban},{id:"senha",label:"Alterar senha",Icon:KeyRound}];
 const maxDate=()=>new Date(Date.now()+89*86400000).toISOString().slice(0,10);
 const longDate=(date:string)=>new Date(date+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"});
 
@@ -24,7 +24,7 @@ class RequestError extends Error{status:number;constructor(message:string,status
 async function send(payload:object):Promise<Dashboard>{
  const r=await fetch("/api/admin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
  const d=await r.json().catch(()=>({}));
- if(!r.ok)throw new RequestError((d as {error?:string}).error||"N�o foi poss�vel concluir. Tente novamente.",r.status);
+ if(!r.ok)throw new RequestError((d as {error?:string}).error||"Não foi possível concluir. Tente novamente.",r.status);
  return d as Dashboard;
 }
 function useAction({onData,onExpired}:Ctx){
@@ -46,8 +46,8 @@ function ContactTab(ctx:Ctx){
  const action=useAction(ctx);
  const [whatsapp,setWhatsapp]=useState(formatPhone(ctx.data.whatsapp)),[phone,setPhone]=useState(formatPhone(ctx.data.phone));
  return <form className="admin-form" onSubmit={e=>{e.preventDefault();action.run({action:"contact",whatsapp,phone},"Contato atualizado no site.")}}>
-  <Heading title="Contato da barbearia" text="O WhatsApp � usado nos bot�es de conversa do site. O telefone aparece junto ao hor�rio de funcionamento quando for diferente do WhatsApp."/>
-  <label htmlFor="whatsapp">N�mero do WhatsApp</label><PhoneInput id="whatsapp" value={whatsapp} onChange={setWhatsapp} disabled={action.busy}/>
+  <Heading title="Contato da barbearia" text="O WhatsApp · usado nos botões de conversa do site. O telefone aparece junto ao horário de funcionamento quando for diferente do WhatsApp."/>
+  <label htmlFor="whatsapp">Número do WhatsApp</label><PhoneInput id="whatsapp" value={whatsapp} onChange={setWhatsapp} disabled={action.busy}/>
   <label htmlFor="contact-phone">Telefone</label><PhoneInput id="contact-phone" value={phone} onChange={setPhone} disabled={action.busy}/>
   <Feedback action={action}/><SaveFooter busy={action.busy} label="Salvar contato"/>
  </form>;
@@ -56,9 +56,9 @@ function ContactTab(ctx:Ctx){
 function HoursTab(ctx:Ctx){
  const action=useAction(ctx);
  const [hours,setHours]=useState<DayHours[]>(()=>structuredClone(ctx.data.hours));
- async function save(e:React.FormEvent){e.preventDefault();const data=await action.run({action:"hours",hours},"Hor�rio de funcionamento atualizado. A agenda do site j� segue a nova grade.");if(data)setHours(structuredClone(data.hours))}
+ async function save(e:React.FormEvent){e.preventDefault();const data=await action.run({action:"hours",hours},"Horário de funcionamento atualizado. A agenda do site já segue a nova grade.");if(data)setHours(structuredClone(data.hours))}
  return <form className="admin-form" onSubmit={save}>
-  <Heading title="Hor�rio de funcionamento" text="Defina os dias e per�odos de atendimento. Os hor�rios oferecidos no agendamento seguem esta grade, em intervalos de 5 minutos."/>
+  <Heading title="Horário de funcionamento" text="Defina os dias e períodos de atendimento. Os horários oferecidos no agendamento seguem esta grade, em intervalos de 5 minutos."/>
   <AvailabilityScheduler value={hours} onChange={setHours} disabled={action.busy}/>
   <Feedback action={action}/><SaveFooter busy={action.busy} label="Salvar horários"/>
  </form>;
@@ -75,25 +75,25 @@ function ServicesTab(ctx:Ctx){
  async function save(e:React.FormEvent){
   e.preventDefault();
   const services=[];
-  for(const d of drafts){const priceCents=cents(d.price);if(Number.isNaN(priceCents))return action.fail(`Valor inv�lido em "${d.name||"servi�o sem nome"}". Use o formato 35,00 ou deixe em branco.`);services.push({id:d.id,name:d.name,duration:Number(d.duration),priceCents})}
-  const data=await action.run({action:"services",services},"Servi�os atualizados no site.");
+  for(const d of drafts){const priceCents=cents(d.price);if(Number.isNaN(priceCents))return action.fail(`Valor inválido em "${d.name||"serviço sem nome"}". Use o formato 35,00 ou deixe em branco.`);services.push({id:d.id,name:d.name,duration:Number(d.duration),priceCents})}
+  const data=await action.run({action:"services",services},"Serviços atualizados no site.");
   if(data)setDrafts(data.services.map(toDraft));
  }
  return <form className="admin-form" onSubmit={save}>
-  <Heading title="Servi�os e valores" text="Cadastre os servi�os oferecidos, a dura��o usada para montar a agenda e o valor exibido ao cliente."/>
+  <Heading title="Serviços e valores" text="Cadastre os serviços oferecidos, a duração usada para montar a agenda e o valor exibido ao cliente."/>
   <div className="service-edit-list">{drafts.map((d,i)=><div className="service-edit" key={d.key}>
-   <div className="admin-field service-name"><label htmlFor={"name-"+d.key}>Servi�o</label><Input id={"name-"+d.key} value={d.name} maxLength={60} required placeholder="Ex.: Corte infantil" onChange={e=>edit(d.key,"name",e.target.value)}/></div>
-   <div className="admin-field"><label htmlFor={"duration-"+d.key}>Dura��o (min)</label><Input id={"duration-"+d.key} type="number" inputMode="numeric" min={10} max={480} step={5} required value={d.duration} onChange={e=>edit(d.key,"duration",e.target.value)}/></div>
+   <div className="admin-field service-name"><label htmlFor={"name-"+d.key}>Serviço</label><Input id={"name-"+d.key} value={d.name} maxLength={60} required placeholder="Ex.: Corte infantil" onChange={e=>edit(d.key,"name",e.target.value)}/></div>
+   <div className="admin-field"><label htmlFor={"duration-"+d.key}>Duração (min)</label><Input id={"duration-"+d.key} type="number" inputMode="numeric" min={10} max={480} step={5} required value={d.duration} onChange={e=>edit(d.key,"duration",e.target.value)}/></div>
    <div className="admin-field"><label htmlFor={"price-"+d.key}>Valor (R$)</label><Input id={"price-"+d.key} inputMode="decimal" placeholder="Sob consulta" value={d.price} onChange={e=>edit(d.key,"price",e.target.value)}/></div>
    <div className="service-actions">
-    <button type="button" className="icon-button" onClick={()=>move(i,-1)} disabled={i===0} aria-label={`Mover ${d.name||"servi�o"} para cima`}><ChevronUp size={16}/></button>
-    <button type="button" className="icon-button" onClick={()=>move(i,1)} disabled={i===drafts.length-1} aria-label={`Mover ${d.name||"servi�o"} para baixo`}><ChevronDown size={16}/></button>
-    <button type="button" className="icon-button" onClick={()=>setDrafts(list=>list.filter(x=>x.key!==d.key))} disabled={drafts.length===1} aria-label={`Remover ${d.name||"servi�o"}`}><Trash2 size={16}/></button>
+    <button type="button" className="icon-button" onClick={()=>move(i,-1)} disabled={i===0} aria-label={`Mover ${d.name||"serviço"} para cima`}><ChevronUp size={16}/></button>
+    <button type="button" className="icon-button" onClick={()=>move(i,1)} disabled={i===drafts.length-1} aria-label={`Mover ${d.name||"serviço"} para baixo`}><ChevronDown size={16}/></button>
+    <button type="button" className="icon-button" onClick={()=>setDrafts(list=>list.filter(x=>x.key!==d.key))} disabled={drafts.length===1} aria-label={`Remover ${d.name||"serviço"}`}><Trash2 size={16}/></button>
    </div>
   </div>)}</div>
-  <button type="button" className="text-button" disabled={drafts.length>=30} onClick={()=>setDrafts(list=>[...list,{key:"new-"+Date.now(),name:"",duration:"30",price:""}])}><Plus size={15}/> Adicionar servi�o</button>
-  <p className="admin-hint">Deixe o valor em branco para exibir “Valor sob consulta. Servi�os removidos deixam de aparecer para novos agendamentos; reservas j� feitas s�o mantidas.</p>
-  <Feedback action={action}/><SaveFooter busy={action.busy} label="Salvar servi�os"/>
+  <button type="button" className="text-button" disabled={drafts.length>=30} onClick={()=>setDrafts(list=>[...list,{key:"new-"+Date.now(),name:"",duration:"30",price:""}])}><Plus size={15}/> Adicionar serviço</button>
+  <p className="admin-hint">Deixe o valor em branco para exibir “Valor sob consulta—. Serviços removidos deixam de aparecer para novos agendamentos; reservas já feitas são mantidas.</p>
+  <Feedback action={action}/><SaveFooter busy={action.busy} label="Salvar serviços"/>
  </form>;
 }
 
@@ -103,24 +103,24 @@ function BlocksTab(ctx:Ctx){
  async function add(e:React.FormEvent){
   e.preventDefault();
   const from=allDay?0:minutes(start),to=allDay?1440:minutes(end);
-  if(from===null||to===null||from>=to)return action.fail("Informe um hor�rio de in�cio anterior ao hor�rio de fim.");
-  if(await action.run({action:"addBlock",date,start:from,end:to,reason},"Aus�ncia registrada. Esses hor�rios n�o aparecem mais para agendamento."))setReason("");
+  if(from===null||to===null||from>=to)return action.fail("Informe um horário de início anterior ao horário de fim.");
+  if(await action.run({action:"addBlock",date,start:from,end:to,reason},"Ausência registrada. Esses horários não aparecem mais para agendamento."))setReason("");
  }
  return <div className="admin-form">
-  <Heading title="Aus�ncias e pausas" text="Bloqueie um per�odo de um dia espec�fico, como uma sa�da tempor�ria ou uma folga. Os clientes n�o ver�o esses hor�rios na agenda."/>
+  <Heading title="Ausências e pausas" text="Bloqueie um período de um dia específico, como uma saída temporária ou uma folga. Os clientes não verão esses horários na agenda."/>
   <form className="block-form" onSubmit={add}>
    <div className="admin-field"><label htmlFor="block-date">Data</label><Input id="block-date" type="date" required min={today()} max={maxDate()} value={date} onChange={e=>setDate(e.target.value)}/></div>
    <div className="admin-field block-all-day"><label className="admin-check"><input type="checkbox" checked={allDay} onChange={e=>setAllDay(e.target.checked)}/>Dia inteiro</label></div>
-   {!allDay&&<><div className="admin-field"><label htmlFor="block-start">In�cio</label><Input id="block-start" type="time" step={300} required value={start} onChange={e=>setStart(e.target.value)}/></div>
+   {!allDay&&<><div className="admin-field"><label htmlFor="block-start">Início</label><Input id="block-start" type="time" step={300} required value={start} onChange={e=>setStart(e.target.value)}/></div>
    <div className="admin-field"><label htmlFor="block-end">Fim</label><Input id="block-end" type="time" step={300} required value={end} onChange={e=>setEnd(e.target.value)}/></div></>}
-   <div className="admin-field wide"><label htmlFor="block-reason">Motivo (opcional, uso interno)</label><Input id="block-reason" maxLength={80} placeholder="Ex.: consulta m�dica" value={reason} onChange={e=>setReason(e.target.value)}/></div>
-   <div className="wide"><Button type="submit" className="primary" disabled={action.busy}>{action.busy?"Salvando⬦":"Registrar aus�ncia"}<Plus size={18}/></Button></div>
+   <div className="admin-field wide"><label htmlFor="block-reason">Motivo (opcional, uso interno)</label><Input id="block-reason" maxLength={80} placeholder="Ex.: consulta médica" value={reason} onChange={e=>setReason(e.target.value)}/></div>
+   <div className="wide"><Button type="submit" className="primary" disabled={action.busy}>{action.busy?"Salvando⬦":"Registrar ausência"}<Plus size={18}/></Button></div>
   </form>
   <Feedback action={action}/>
-  <h3 className="admin-subtitle">Próximas aus�ncias</h3>
-  {ctx.data.blocks.length===0?<p className="admin-empty">Nenhuma aus�ncia programada.</p>:<ul className="block-list">{ctx.data.blocks.map(b=><li key={b.id}>
-   <div><strong>{longDate(b.date)}</strong><span>{b.start===0&&b.end===1440?"Dia inteiro":`${time(b.start)}  ${time(b.end)}`}{b.reason?` � ${b.reason}`:""}</span></div>
-   <button type="button" className="icon-button" disabled={action.busy} onClick={()=>action.run({action:"deleteBlock",id:b.id},"Aus�ncia removida. Os hor�rios voltaram para a agenda.")} aria-label={`Remover aus�ncia de ${longDate(b.date)}`}><Trash2 size={16}/></button>
+  <h3 className="admin-subtitle">Próximas ausências</h3>
+  {ctx.data.blocks.length===0?<p className="admin-empty">Nenhuma ausência programada.</p>:<ul className="block-list">{ctx.data.blocks.map(b=><li key={b.id}>
+   <div><strong>{longDate(b.date)}</strong><span>{b.start===0&&b.end===1440?"Dia inteiro":`${time(b.start)} – ${time(b.end)}`}{b.reason?` · ${b.reason}`:""}</span></div>
+   <button type="button" className="icon-button" disabled={action.busy} onClick={()=>action.run({action:"deleteBlock",id:b.id},"Ausência removida. Os horários voltaram para a agenda.")} aria-label={`Remover ausência de ${longDate(b.date)}`}><Trash2 size={16}/></button>
   </li>)}</ul>}
  </div>;
 }
@@ -140,17 +140,17 @@ function CustomersTab(ctx:Ctx){
  const open=(customer:CustomerSummary)=>{setOpenPhone(customer.phone);setEditName(customer.name);setEditPhone(formatPhone(customer.phone));action.fail("")};
  async function save(e:React.FormEvent){e.preventDefault();if(!openPhone)return;const data=await action.run({action:"updateCustomer",currentPhone:openPhone,phone:editPhone,name:editName},"Cliente atualizado.");if(data)setOpenPhone(null)}
  return <div className="admin-form">
-  <Heading title="Clientes" text="Consulte os clientes registrados, atualize seus dados e acompanhe os atendimentos realizados e o pr�ximo horário."/>
+  <Heading title="Clientes" text="Consulte os clientes registrados, atualize seus dados e acompanhe os atendimentos realizados e o próximo horário."/>
   <label htmlFor="customer-search">Filtrar por nome ou telefone</label><Input id="customer-search" type="search" placeholder="Digite um nome ou telefone" value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}}/>
   <Feedback action={action}/>
   <h3 className="admin-subtitle">Clientes registrados ({filteredCustomers.length})</h3>
   {filteredCustomers.length===0?<p className="admin-empty">Nenhum cliente encontrado.</p>:<><div className="customer-list">{customers.map(customer=>{const history=historyFor(customer.phone),next=nextFor(history),openCard=openPhone===customer.phone;return <article className="customer-card" key={customer.phone}>
-   <button type="button" className="customer-card-head" onClick={()=>openCard?setOpenPhone(null):open(customer)} aria-expanded={openCard}><span><strong>{customer.name||"Cliente sem nome"}</strong><small>{formatPhone(customer.phone)} � {history.length} atendimento{history.length===1?"":"s"}</small></span><ChevronDown size={18}/></button>
+   <button type="button" className="customer-card-head" onClick={()=>openCard?setOpenPhone(null):open(customer)} aria-expanded={openCard}><span><strong>{customer.name||"Cliente sem nome"}</strong><small>{formatPhone(customer.phone)} · {history.length} atendimento{history.length===1?"":"s"}</small></span><ChevronDown size={18}/></button>
    {openCard&&<div className="customer-card-body"><form className="customer-edit" onSubmit={save}><div className="admin-field"><label htmlFor={`customer-name-${customer.phone}`}>Nome do cliente</label><Input id={`customer-name-${customer.phone}`} value={editName} maxLength={100} required onChange={e=>setEditName(e.target.value)} disabled={action.busy}/></div><div className="admin-field"><label htmlFor={`customer-phone-${customer.phone}`}>Telefone</label><PhoneInput id={`customer-phone-${customer.phone}`} value={editPhone} onChange={setEditPhone} disabled={action.busy}/></div><Button type="submit" className="primary" disabled={action.busy}>{action.busy?"Salvando…":"Salvar dados"}<Check size={18}/></Button></form>
-    {next&&<div className="customer-next"><span>PRÓXIMO ATENDIMENTO</span><strong>{longDate(next.date)} �s {time(next.start)}</strong><small>{next.serviceName} � {next.barberName||"Qualquer dispon�vel"}</small></div>}
-    <div className="customer-history"><h4>Hist�rico de atendimentos</h4>{history.length===0?<p className="admin-empty">Nenhum atendimento registrado.</p>:<ul>{history.map(item=><li key={item.id}><div><strong>{longDate(item.date)} �s {time(item.start)}</strong><span>{item.serviceName} � {item.barberName||"Qualquer dispon�vel"}</span></div><b>{item.status}</b></li>)}</ul>}</div>
+    {next&&<div className="customer-next"><span>PRÓXIMO ATENDIMENTO</span><strong>{longDate(next.date)} às {time(next.start)}</strong><small>{next.serviceName} · {next.barberName||"Qualquer disponível"}</small></div>}
+    <div className="customer-history"><h4>Histórico de atendimentos</h4>{history.length===0?<p className="admin-empty">Nenhum atendimento registrado.</p>:<ul>{history.map(item=><li key={item.id}><div><strong>{longDate(item.date)} às {time(item.start)}</strong><span>{item.serviceName} · {item.barberName||"Qualquer disponível"}</span></div><b>{item.status}</b></li>)}</ul>}</div>
    </div>}
-  </article>})}</div><div className="customer-pagination" aria-label="Pagina��o de clientes"><span>P�gina {currentPage} de {pageCount}</span><div><Button type="button" variant="outline" disabled={currentPage===1} onClick={()=>setPage(value=>Math.max(1,value-1))}>Anterior</Button><Button type="button" variant="outline" disabled={currentPage===pageCount} onClick={()=>setPage(value=>Math.min(pageCount,value+1))}>Próxima</Button></div></div></>}
+  </article>})}</div><div className="customer-pagination" aria-label="Paginação de clientes"><span>Página {currentPage} de {pageCount}</span><div><Button type="button" variant="outline" disabled={currentPage===1} onClick={()=>setPage(value=>Math.max(1,value-1))}>Anterior</Button><Button type="button" variant="outline" disabled={currentPage===pageCount} onClick={()=>setPage(value=>Math.min(pageCount,value+1))}>Próxima</Button></div></div></>}
  </div>;
 }
 
@@ -160,10 +160,10 @@ function BlockedPhonesTab(ctx:Ctx){
  const since=(iso:string)=>new Date(iso).toLocaleDateString("pt-BR",{day:"numeric",month:"short",year:"numeric"});
  async function add(e:React.FormEvent){
   e.preventDefault();
-  if(await action.run({action:"blockPhone",phone,reason},"Telefone bloqueado. Ele n�o consegue mais agendar pelo site.")){setPhone("");setReason("")}
+  if(await action.run({action:"blockPhone",phone,reason},"Telefone bloqueado. Ele não consegue mais agendar pelo site.")){setPhone("");setReason("")}
  }
  return <div className="admin-form">
-  <Heading title="Telefones bloqueados" text="Clientes com um telefone desta lista n�o conseguem agendar pelo site. Agendamentos j� feitos por esse n�mero continuam registrados."/>
+  <Heading title="Telefones bloqueados" text="Clientes com um telefone desta lista não conseguem agendar pelo site. Agendamentos já feitos por esse número continuam registrados."/>
   <form className="block-form" onSubmit={add}>
    <div className="admin-field"><label htmlFor="blocked-phone">Telefone</label><PhoneInput id="blocked-phone" value={phone} onChange={setPhone} disabled={action.busy}/></div>
    <div className="admin-field"><label htmlFor="blocked-reason">Motivo (opcional, uso interno)</label><Input id="blocked-reason" maxLength={120} placeholder="Ex.: faltou sem avisar" disabled={action.busy} value={reason} onChange={e=>setReason(e.target.value)}/></div>
@@ -172,7 +172,7 @@ function BlockedPhonesTab(ctx:Ctx){
   <Feedback action={action}/>
   <h3 className="admin-subtitle">Lista de bloqueio ({ctx.data.blockedPhones.length})</h3>
   {ctx.data.blockedPhones.length===0?<p className="admin-empty">Nenhum telefone bloqueado.</p>:<ul className="block-list">{ctx.data.blockedPhones.map(b=><li key={b.phone}>
-   <div><strong>{formatPhone(b.phone)}</strong><span>{b.reason||"Sem motivo informado"} � desde {since(b.createdAt)}</span></div>
+   <div><strong>{formatPhone(b.phone)}</strong><span>{b.reason||"Sem motivo informado"} · desde {since(b.createdAt)}</span></div>
    <button type="button" className="text-button" disabled={action.busy} onClick={()=>action.run({action:"unblockPhone",phone:b.phone},`${formatPhone(b.phone)} foi desbloqueado.`)} aria-label={`Desbloquear ${formatPhone(b.phone)}`}>Desbloquear</button>
   </li>)}</ul>}
  </div>;
@@ -198,7 +198,7 @@ function BarbeirosTab(ctx:Ctx){
    if(await action.run({action:"editBarber",id:editId,name:editName.trim()},"Barbeiro atualizado.")){setEditId(null);setEditName("")}
   }
   return <div className="admin-form">
-   <Heading title="Barbeiros" text="Gerencie os profissionais que atendem na barbearia. Barbeiros inativos n�o aparecem para os clientes no agendamento."/>
+   <Heading title="Barbeiros" text="Gerencie os profissionais que atendem na barbearia. Barbeiros inativos não aparecem para os clientes no agendamento."/>
    <form className="block-form" onSubmit={add}>
     <div className="admin-field"><label htmlFor="barber-name">Nome do barbeiro</label><Input id="barber-name" placeholder="Ex.: Carlos" required minLength={2} maxLength={60} value={newName} onChange={e=>setNewName(e.target.value)}/></div>
     <div className="wide"><Button type="submit" className="primary" disabled={action.busy}>{action.busy?"Salvando⬦":"Adicionar barbeiro"}<Plus size={18}/></Button></div>
@@ -219,7 +219,7 @@ function BarbeirosTab(ctx:Ctx){
    <Dialog open={!!editId} onOpenChange={(o)=>{if(!o&&!action.busy){setEditId(null);setEditName("")}}}>
     <DialogContent showCloseButton={!action.busy}>
     <form onSubmit={saveEdit} className="grid gap-4">
-     <DialogHeader><DialogTitle>Editar barbeiro</DialogTitle><DialogDescription>Atualize o nome do profissional e salve as altera��es.</DialogDescription></DialogHeader>
+     <DialogHeader><DialogTitle>Editar barbeiro</DialogTitle><DialogDescription>Atualize o nome do profissional e salve as alterações.</DialogDescription></DialogHeader>
      <div className="admin-field" style={{marginTop:16}}>
       <label htmlFor="edit-barber-name">Nome</label>
       <Input required autoFocus id="edit-barber-name" value={editName} onChange={e=>setEditName(e.target.value)} minLength={2} maxLength={60} disabled={action.busy}/>
@@ -241,11 +241,11 @@ function BarbeirosTab(ctx:Ctx){
  async function save(e:React.FormEvent){
   e.preventDefault();
   if(next.length<8)return action.fail("A nova senha precisa ter pelo menos 8 caracteres.");
-  if(next!==confirm)return action.fail("A confirma��o n�o confere com a nova senha.");
-  if(await action.run({action:"password",current,next},"Senha alterada. Outras sess�es abertas foram encerradas.")){setCurrent("");setNext("");setConfirm("")}
+  if(next!==confirm)return action.fail("A confirmação não confere com a nova senha.");
+  if(await action.run({action:"password",current,next},"Senha alterada. Outras sessões abertas foram encerradas.")){setCurrent("");setNext("");setConfirm("")}
  }
  return <form className="admin-form" onSubmit={save}>
-  <Heading title="Alterar senha" text={`Voc� est� conectado como ${ctx.data.username}. Use uma senha com pelo menos 8 caracteres.`}/>
+  <Heading title="Alterar senha" text={`Você est· conectado como ${ctx.data.username}. Use uma senha com pelo menos 8 caracteres.`}/>
   <label htmlFor="current-password">Senha atual</label><Input id="current-password" type="password" autoComplete="current-password" required value={current} onChange={e=>setCurrent(e.target.value)}/>
   <label htmlFor="new-password">Nova senha</label><Input id="new-password" type="password" autoComplete="new-password" required minLength={8} value={next} onChange={e=>setNext(e.target.value)}/>
   <label htmlFor="confirm-password">Confirmar nova senha</label><Input id="confirm-password" type="password" autoComplete="new-password" required minLength={8} value={confirm} onChange={e=>setConfirm(e.target.value)}/>
@@ -260,9 +260,9 @@ function Login({onSuccess}:{onSuccess:()=>void}){
   try{await send({action:"login",username,password});setPassword("");onSuccess()}catch(err){setError((err as Error).message)}finally{setBusy(false)}
  }
  return <div className="admin-login"><section className="booking-panel"><div className="panel-body">
-  <p className="eyebrow">ÁREA RESTRITA</p><h2 className="admin-title">Entrar no painel</h2><p className="admin-lead">Acesse com seu usu�rio e senha de administrador.</p>
+  <p className="eyebrow">ÁREA RESTRITA</p><h2 className="admin-title">Entrar no painel</h2><p className="admin-lead">Acesse com seu usuário e senha de administrador.</p>
   <form className="admin-form" onSubmit={submit}>
-   <label htmlFor="username">Usu�rio</label><Input id="username" autoComplete="username" required disabled={busy} value={username} onChange={e=>setUsername(e.target.value)}/>
+   <label htmlFor="username">Usuário</label><Input id="username" autoComplete="username" required disabled={busy} value={username} onChange={e=>setUsername(e.target.value)}/>
    <label htmlFor="password">Senha</label><Input id="password" type="password" autoComplete="current-password" required disabled={busy} value={password} onChange={e=>setPassword(e.target.value)}/>
    {error&&<div className="error admin-login-error" role="alert">{error}</div>}
    <Button type="submit" className="primary admin-submit" disabled={busy}>{busy?"Entrando⬦":"Entrar"}<ArrowRight size={18}/></Button>
@@ -283,13 +283,13 @@ export default function Admin(){
  return <div className="site"><header className="header"><a href="/admin" className="brand"><img src="/logo.png" alt="Barbearia Sharp Razors"/><span>SHARP RAZORS<small>PAINEL</small></span></a><nav><a href="/" target="_blank" rel="noreferrer">Ver site</a>{status==="ready"&&<button type="button" className="nav-button" onClick={logout}><LogOut size={17}/> Sair</button>}</nav></header>
  <main>
   {status==="loading"&&<p className="loading-note">Carregando painel&</p>}
-  {status==="error"&&<div className="error" role="alert">N�o foi poss�vel carregar o painel.<button onClick={()=>{setStatus("loading");load()}}>Tentar novamente</button></div>}
+  {status==="error"&&<div className="error" role="alert">Não foi possível carregar o painel.<button onClick={()=>{setStatus("loading");load()}}>Tentar novamente</button></div>}
   {status==="login"&&<Login onSuccess={()=>{setTab("agenda");load()}}/>}
   {status==="ready"&&ctx&&<><div className="intro"><p className="eyebrow">PAINEL ADMINISTRATIVO</p><h1>GERENCIAR BARBEARIA<span>.</span></h1></div>
   <div className="workspace admin-workspace"><section className="booking-panel"><div className="panel-body">
    {tab==="contato"&&<ContactTab {...ctx}/>}{tab==="horarios"&&<HoursTab {...ctx}/>}{tab==="servicos"&&<ServicesTab {...ctx}/>}{tab==="barbeiros"&&<BarbeirosTab {...ctx}/>}{tab==="ausencias"&&<BlocksTab {...ctx}/>}{tab==="bloqueios"&&<BlockedPhonesTab {...ctx}/>}{tab==="senha"&&<PasswordTab {...ctx}/>}{tab==="agenda"&&<AgendaTab {...ctx}/>}{tab==="clientes"&&<CustomersTab {...ctx}/>}
   </div></section>
-  <aside><div className="admin-tabs">{tabs.map(({id,label,Icon})=><button key={id} type="button" className={tab===id?"current":""} aria-pressed={tab===id} onClick={()=>setTab(id)}><Icon size={17}/>{label}<ChevronRight size={15}/></button>)}</div><p className="admin-user">Conectado como <strong>{ctx.data.username}</strong>. As altera��es aparecem imediatamente no site.</p></aside></div></>}
+  <aside><div className="admin-tabs">{tabs.map(({id,label,Icon})=><button key={id} type="button" className={tab===id?"current":""} aria-pressed={tab===id} onClick={()=>setTab(id)}><Icon size={17}/>{label}<ChevronRight size={15}/></button>)}</div><p className="admin-user">Conectado como <strong>{ctx.data.username}</strong>. As alterações aparecem imediatamente no site.</p></aside></div></>}
  </main>
- <footer><span>� {new Date().getFullYear()} Sharp Razors</span><span>Painel administrativo</span><span>BARBEARIA & ESTILO</span></footer></div>;
+ <footer><span>· {new Date().getFullYear()} Sharp Razors</span><span>Painel administrativo</span><span>BARBEARIA & ESTILO</span></footer></div>;
 }
