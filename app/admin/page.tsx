@@ -40,7 +40,7 @@ function useAction({onData,onExpired}:Ctx){
 type Action=ReturnType<typeof useAction>;
 function Feedback({action}:{action:Action}){return <div aria-live="polite">{action.error&&<div className="error" role="alert">{action.error}</div>}{action.notice&&<div className="admin-notice" role="status"><Check size={17}/>{action.notice}</div>}</div>}
 function Heading({title,text}:{title:string,text:string}){return <div className="section-heading"><h2>{title}</h2><p>{text}</p></div>}
-function SaveFooter({busy,label,hint}:{busy:boolean,label:string,hint?:string}){return <div className="panel-footer"><span>{hint}</span><Button type="submit" className="primary" disabled={busy}>{busy?"Salvandoâ€¦":label}<Check size={18}/></Button></div>}
+function SaveFooter({busy,label,hint}:{busy:boolean,label:string,hint?:string}){return <div className="panel-footer"><span>{hint}</span><Button type="submit" className="primary" disabled={busy}>{busy?"Salvando⬦":label}<Check size={18}/></Button></div>}
 
 function ContactTab(ctx:Ctx){
  const action=useAction(ctx);
@@ -60,7 +60,7 @@ function HoursTab(ctx:Ctx){
  return <form className="admin-form" onSubmit={save}>
   <Heading title="Hor�rio de funcionamento" text="Defina os dias e per�odos de atendimento. Os hor�rios oferecidos no agendamento seguem esta grade, em intervalos de 5 minutos."/>
   <AvailabilityScheduler value={hours} onChange={setHours} disabled={action.busy}/>
-  <Feedback action={action}/><SaveFooter busy={action.busy} label="Salvar horÃ¡rios"/>
+  <Feedback action={action}/><SaveFooter busy={action.busy} label="Salvar horários"/>
  </form>;
 }
 
@@ -92,7 +92,7 @@ function ServicesTab(ctx:Ctx){
    </div>
   </div>)}</div>
   <button type="button" className="text-button" disabled={drafts.length>=30} onClick={()=>setDrafts(list=>[...list,{key:"new-"+Date.now(),name:"",duration:"30",price:""}])}><Plus size={15}/> Adicionar servi�o</button>
-  <p className="admin-hint">Deixe o valor em branco para exibir â€œValor sob consulta. Servi�os removidos deixam de aparecer para novos agendamentos; reservas j� feitas s�o mantidas.</p>
+  <p className="admin-hint">Deixe o valor em branco para exibir “Valor sob consulta. Servi�os removidos deixam de aparecer para novos agendamentos; reservas j� feitas s�o mantidas.</p>
   <Feedback action={action}/><SaveFooter busy={action.busy} label="Salvar servi�os"/>
  </form>;
 }
@@ -114,12 +114,12 @@ function BlocksTab(ctx:Ctx){
    {!allDay&&<><div className="admin-field"><label htmlFor="block-start">In�cio</label><Input id="block-start" type="time" step={300} required value={start} onChange={e=>setStart(e.target.value)}/></div>
    <div className="admin-field"><label htmlFor="block-end">Fim</label><Input id="block-end" type="time" step={300} required value={end} onChange={e=>setEnd(e.target.value)}/></div></>}
    <div className="admin-field wide"><label htmlFor="block-reason">Motivo (opcional, uso interno)</label><Input id="block-reason" maxLength={80} placeholder="Ex.: consulta m�dica" value={reason} onChange={e=>setReason(e.target.value)}/></div>
-   <div className="wide"><Button type="submit" className="primary" disabled={action.busy}>{action.busy?"Salvandoâ€¦":"Registrar aus�ncia"}<Plus size={18}/></Button></div>
+   <div className="wide"><Button type="submit" className="primary" disabled={action.busy}>{action.busy?"Salvando⬦":"Registrar aus�ncia"}<Plus size={18}/></Button></div>
   </form>
   <Feedback action={action}/>
-  <h3 className="admin-subtitle">PrÃ³ximas aus�ncias</h3>
+  <h3 className="admin-subtitle">Próximas aus�ncias</h3>
   {ctx.data.blocks.length===0?<p className="admin-empty">Nenhuma aus�ncia programada.</p>:<ul className="block-list">{ctx.data.blocks.map(b=><li key={b.id}>
-   <div><strong>{longDate(b.date)}</strong><span>{b.start===0&&b.end===1440?"Dia inteiro":`${time(b.start)} � ${time(b.end)}`}{b.reason?` � ${b.reason}`:""}</span></div>
+   <div><strong>{longDate(b.date)}</strong><span>{b.start===0&&b.end===1440?"Dia inteiro":`${time(b.start)}  ${time(b.end)}`}{b.reason?` � ${b.reason}`:""}</span></div>
    <button type="button" className="icon-button" disabled={action.busy} onClick={()=>action.run({action:"deleteBlock",id:b.id},"Aus�ncia removida. Os hor�rios voltaram para a agenda.")} aria-label={`Remover aus�ncia de ${longDate(b.date)}`}><Trash2 size={16}/></button>
   </li>)}</ul>}
  </div>;
@@ -127,24 +127,30 @@ function BlocksTab(ctx:Ctx){
 
 function CustomersTab(ctx:Ctx){
  const action=useAction(ctx);
- const [query,setQuery]=useState(""),[openPhone,setOpenPhone]=useState<string|null>(null),[editName,setEditName]=useState(""),[editPhone,setEditPhone]=useState("");
- const customers=(ctx.data.customers||[]).filter(c=>{const value=query.trim().toLocaleLowerCase("pt-BR");return !value||c.name.toLocaleLowerCase("pt-BR").includes(value)||c.phone.includes(query.replace(/\D/g,""))});
+ const [query,setQuery]=useState(""),[page,setPage]=useState(1),[openPhone,setOpenPhone]=useState<string|null>(null),[editName,setEditName]=useState(""),[editPhone,setEditPhone]=useState("");
+ const normalizedQuery=query.trim().toLocaleLowerCase("pt-BR");
+ const phoneQuery=query.replace(/\D/g,"");
+ const filteredCustomers=(ctx.data.customers||[]).filter(c=>!normalizedQuery||c.name.toLocaleLowerCase("pt-BR").includes(normalizedQuery)||(phoneQuery.length>0&&c.phone.includes(phoneQuery)));
+ const pageCount=Math.max(1,Math.ceil(filteredCustomers.length/10));
+ const currentPage=Math.min(page,pageCount);
+ const customers=filteredCustomers.slice((currentPage-1)*10,currentPage*10);
+ useEffect(()=>setPage(1),[query]);
  const historyFor=(phone:string)=>ctx.data.bookings.filter(b=>b.phone===phone).sort((a,b)=>b.date.localeCompare(a.date)||b.start-a.start);
  const nextFor=(history:Booking[])=>history.filter(b=>b.date>=today()&&!['finalizado','cancelado','nao_compareceu'].includes(b.status)).sort((a,b)=>a.date.localeCompare(b.date)||a.start-b.start)[0];
  const open=(customer:CustomerSummary)=>{setOpenPhone(customer.phone);setEditName(customer.name);setEditPhone(formatPhone(customer.phone));action.fail("")};
  async function save(e:React.FormEvent){e.preventDefault();if(!openPhone)return;const data=await action.run({action:"updateCustomer",currentPhone:openPhone,phone:editPhone,name:editName},"Cliente atualizado.");if(data)setOpenPhone(null)}
  return <div className="admin-form">
   <Heading title="Clientes" text="Consulte os clientes registrados, atualize seus dados e acompanhe os atendimentos realizados e o pr�ximo horário."/>
-  <label htmlFor="customer-search">Filtrar por nome ou telefone</label><Input id="customer-search" type="search" placeholder="Digite um nome ou telefone" value={query} onChange={e=>setQuery(e.target.value)}/>
+  <label htmlFor="customer-search">Filtrar por nome ou telefone</label><Input id="customer-search" type="search" placeholder="Digite um nome ou telefone" value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}}/>
   <Feedback action={action}/>
-  <h3 className="admin-subtitle">Clientes registrados ({customers.length})</h3>
-  {customers.length===0?<p className="admin-empty">Nenhum cliente encontrado.</p>:<div className="customer-list">{customers.map(customer=>{const history=historyFor(customer.phone),next=nextFor(history),openCard=openPhone===customer.phone;return <article className="customer-card" key={customer.phone}>
+  <h3 className="admin-subtitle">Clientes registrados ({filteredCustomers.length})</h3>
+  {filteredCustomers.length===0?<p className="admin-empty">Nenhum cliente encontrado.</p>:<><div className="customer-list">{customers.map(customer=>{const history=historyFor(customer.phone),next=nextFor(history),openCard=openPhone===customer.phone;return <article className="customer-card" key={customer.phone}>
    <button type="button" className="customer-card-head" onClick={()=>openCard?setOpenPhone(null):open(customer)} aria-expanded={openCard}><span><strong>{customer.name||"Cliente sem nome"}</strong><small>{formatPhone(customer.phone)} � {history.length} atendimento{history.length===1?"":"s"}</small></span><ChevronDown size={18}/></button>
    {openCard&&<div className="customer-card-body"><form className="customer-edit" onSubmit={save}><div className="admin-field"><label htmlFor={`customer-name-${customer.phone}`}>Nome do cliente</label><Input id={`customer-name-${customer.phone}`} value={editName} maxLength={100} required onChange={e=>setEditName(e.target.value)} disabled={action.busy}/></div><div className="admin-field"><label htmlFor={`customer-phone-${customer.phone}`}>Telefone</label><PhoneInput id={`customer-phone-${customer.phone}`} value={editPhone} onChange={setEditPhone} disabled={action.busy}/></div><Button type="submit" className="primary" disabled={action.busy}>{action.busy?"Salvando…":"Salvar dados"}<Check size={18}/></Button></form>
     {next&&<div className="customer-next"><span>PRÓXIMO ATENDIMENTO</span><strong>{longDate(next.date)} �s {time(next.start)}</strong><small>{next.serviceName} � {next.barberName||"Qualquer dispon�vel"}</small></div>}
     <div className="customer-history"><h4>Hist�rico de atendimentos</h4>{history.length===0?<p className="admin-empty">Nenhum atendimento registrado.</p>:<ul>{history.map(item=><li key={item.id}><div><strong>{longDate(item.date)} �s {time(item.start)}</strong><span>{item.serviceName} � {item.barberName||"Qualquer dispon�vel"}</span></div><b>{item.status}</b></li>)}</ul>}</div>
    </div>}
-  </article>})}</div>}
+  </article>})}</div><div className="customer-pagination" aria-label="Pagina��o de clientes"><span>P�gina {currentPage} de {pageCount}</span><div><Button type="button" variant="outline" disabled={currentPage===1} onClick={()=>setPage(value=>Math.max(1,value-1))}>Anterior</Button><Button type="button" variant="outline" disabled={currentPage===pageCount} onClick={()=>setPage(value=>Math.min(pageCount,value+1))}>Próxima</Button></div></div></>}
  </div>;
 }
 
@@ -161,7 +167,7 @@ function BlockedPhonesTab(ctx:Ctx){
   <form className="block-form" onSubmit={add}>
    <div className="admin-field"><label htmlFor="blocked-phone">Telefone</label><PhoneInput id="blocked-phone" value={phone} onChange={setPhone} disabled={action.busy}/></div>
    <div className="admin-field"><label htmlFor="blocked-reason">Motivo (opcional, uso interno)</label><Input id="blocked-reason" maxLength={120} placeholder="Ex.: faltou sem avisar" disabled={action.busy} value={reason} onChange={e=>setReason(e.target.value)}/></div>
-   <div className="wide"><Button type="submit" className="primary" disabled={action.busy}>{action.busy?"Salvandoâ€¦":"Bloquear telefone"}<Ban size={18}/></Button></div>
+   <div className="wide"><Button type="submit" className="primary" disabled={action.busy}>{action.busy?"Salvando⬦":"Bloquear telefone"}<Ban size={18}/></Button></div>
   </form>
   <Feedback action={action}/>
   <h3 className="admin-subtitle">Lista de bloqueio ({ctx.data.blockedPhones.length})</h3>
@@ -195,14 +201,14 @@ function BarbeirosTab(ctx:Ctx){
    <Heading title="Barbeiros" text="Gerencie os profissionais que atendem na barbearia. Barbeiros inativos n�o aparecem para os clientes no agendamento."/>
    <form className="block-form" onSubmit={add}>
     <div className="admin-field"><label htmlFor="barber-name">Nome do barbeiro</label><Input id="barber-name" placeholder="Ex.: Carlos" required minLength={2} maxLength={60} value={newName} onChange={e=>setNewName(e.target.value)}/></div>
-    <div className="wide"><Button type="submit" className="primary" disabled={action.busy}>{action.busy?"Salvandoâ€¦":"Adicionar barbeiro"}<Plus size={18}/></Button></div>
+    <div className="wide"><Button type="submit" className="primary" disabled={action.busy}>{action.busy?"Salvando⬦":"Adicionar barbeiro"}<Plus size={18}/></Button></div>
    </form>
    <Feedback action={action}/>
    <h3 className="admin-subtitle">Barbeiros cadastrados ({barbers.length})</h3>
    {barbers.length===0?<p className="admin-empty">Nenhum barbeiro cadastrado.</p>:<ul className="block-list">{barbers.map(b=><li key={b.id}>
     <div style={{opacity:b.active?1:.5}}>
      <strong>{b.name}</strong>
-     <span>{b.active?"Ativo":"Inativo"}{b.id==="qualquer"?" Â· PadrÃ£o":""}</span>
+     <span>{b.active?"Ativo":"Inativo"}{b.id==="qualquer"?" · Padrão":""}</span>
     </div>
     <div className="service-actions">
      {b.id!=="qualquer"&&<button type="button" className="text-button" disabled={action.busy} onClick={()=>{setEditId(b.id);setEditName(b.name)}} aria-label={`Editar ${b.name}`}>Editar</button>}
@@ -221,7 +227,7 @@ function BarbeirosTab(ctx:Ctx){
      {action.error&&<div className="error" role="alert">{action.error}</div>}
      <DialogFooter>
       <DialogClose asChild><Button type="button" variant="outline" disabled={action.busy}>Cancelar</Button></DialogClose>
-      <Button type="submit" className="primary" disabled={action.busy||editName.trim().length<2}>{action.busy?"Salvandoâ€¦":"Salvar"}</Button>
+      <Button type="submit" className="primary" disabled={action.busy||editName.trim().length<2}>{action.busy?"Salvando⬦":"Salvar"}</Button>
      </DialogFooter>
     </form>
     </DialogContent>
@@ -254,12 +260,12 @@ function Login({onSuccess}:{onSuccess:()=>void}){
   try{await send({action:"login",username,password});setPassword("");onSuccess()}catch(err){setError((err as Error).message)}finally{setBusy(false)}
  }
  return <div className="admin-login"><section className="booking-panel"><div className="panel-body">
-  <p className="eyebrow">ÃREA RESTRITA</p><h2 className="admin-title">Entrar no painel</h2><p className="admin-lead">Acesse com seu usu�rio e senha de administrador.</p>
+  <p className="eyebrow">ÁREA RESTRITA</p><h2 className="admin-title">Entrar no painel</h2><p className="admin-lead">Acesse com seu usu�rio e senha de administrador.</p>
   <form className="admin-form" onSubmit={submit}>
    <label htmlFor="username">Usu�rio</label><Input id="username" autoComplete="username" required disabled={busy} value={username} onChange={e=>setUsername(e.target.value)}/>
    <label htmlFor="password">Senha</label><Input id="password" type="password" autoComplete="current-password" required disabled={busy} value={password} onChange={e=>setPassword(e.target.value)}/>
    {error&&<div className="error admin-login-error" role="alert">{error}</div>}
-   <Button type="submit" className="primary admin-submit" disabled={busy}>{busy?"Entrandoâ€¦":"Entrar"}<ArrowRight size={18}/></Button>
+   <Button type="submit" className="primary admin-submit" disabled={busy}>{busy?"Entrando⬦":"Entrar"}<ArrowRight size={18}/></Button>
   </form>
  </div></section></div>;
 }
