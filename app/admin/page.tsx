@@ -11,7 +11,7 @@ import {AvailabilityScheduler} from "@/components/admin/availability-scheduler";
 import {AgendaTimeline} from "@/components/admin/agenda-timeline";
 
 type Barber={id:string,name:string,active:number,position:number};
-type Booking={id:string,date:string,start:number,end:number,service:string,name:string,phone:string,status:string,barber:string};
+import type {Booking} from "@/lib/booking-history";
 type Dashboard=SiteConfig&{username:string,blocks:Block[],blockedPhones:BlockedPhone[],bookings:Booking[],barbers:Barber[],serviceColors:Record<string,string>};
 type Tab="contato"|"horarios"|"servicos"|"barbeiros"|"ausencias"|"bloqueios"|"senha"|"agenda";
 type Ctx={data:Dashboard,onData:(data:Dashboard)=>void,onExpired:()=>void};
@@ -149,7 +149,7 @@ function BlockedPhonesTab(ctx:Ctx){
 }
 
 function AgendaTab(ctx:Ctx){
-  return <AgendaTimeline bookings={(ctx.data.bookings||[]).map(booking=>({...booking,barber:ctx.data.barbers?.find(barber=>barber.id===booking.barber)?.name??booking.barber}))} services={ctx.data.services} onData={ctx.onData}/>
+  return <AgendaTimeline bookings={ctx.data.bookings||[]} onData={ctx.onData}/>
  }
 
 function BarbeirosTab(ctx:Ctx){

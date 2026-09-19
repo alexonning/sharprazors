@@ -22,6 +22,18 @@ INSERT INTO barbers (id, name, active, position, created_at) VALUES
   ('qualquer', 'Qualquer disponível', 1, 0, '2026-09-17T00:00:00.000Z')
 ON CONFLICT (id) DO NOTHING;
 
+-- Immutable booking details. Existing prices cannot be reconstructed from today's catalog.
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS service_name text;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS barber_name text;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS duration_minutes integer;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS price_cents integer;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS snapshot_version integer NOT NULL DEFAULT 0;
+UPDATE bookings SET
+  service_name=COALESCE(service_name,(SELECT name FROM services WHERE services.id=bookings.service),service),
+  barber_name=COALESCE(barber_name,(SELECT name FROM barbers WHERE barbers.id=bookings.barber),barber),
+  duration_minutes=COALESCE(duration_minutes,"end"-start)
+WHERE service_name IS NULL OR barber_name IS NULL OR duration_minutes IS NULL;
+
 -- Defaults for a new database only; existing rows (including ones edited in /admin) are never overwritten.
 INSERT INTO services (id, name, duration, price_cents, position, active) VALUES
   ('corte', 'Corte de cabelo', 30, NULL, 0, 1),

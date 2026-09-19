@@ -21,8 +21,10 @@ export const assignLegacyBookingsSql = `UPDATE bookings SET barber =
 
 // This statement runs in a serialized booking batch: check and assignment are
 // one write, including when the customer chooses any available professional.
-export const reserveBarberSql = `INSERT INTO bookings (id,date,start,"end",service,name,phone,barber,created_at)
-  SELECT ?,?,CAST(? AS INTEGER),CAST(? AS INTEGER),?,?,?,b.id,?
+export const reserveBarberSql = `INSERT INTO bookings (id,date,start,"end",service,name,phone,barber,created_at,
+  service_name,duration_minutes,price_cents,barber_name,snapshot_version)
+  SELECT ?,?,CAST(? AS INTEGER),CAST(? AS INTEGER),?,?,?,b.id,?,
+    ?,CAST(? AS INTEGER),CAST(? AS INTEGER),b.name,1
   FROM barbers b WHERE b.active=1 AND b.id<>'qualquer' AND (?='qualquer' OR b.id=?)
   AND NOT EXISTS (SELECT 1 FROM bookings existing
     WHERE existing.date=? AND existing.barber=b.id

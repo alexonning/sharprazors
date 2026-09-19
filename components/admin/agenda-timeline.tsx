@@ -9,10 +9,10 @@ import {Badge} from "@/components/ui/badge";
 import {Separator} from "@/components/ui/separator";
 import {Sheet,SheetContent,SheetHeader,SheetTitle,SheetDescription} from "@/components/ui/sheet";
 import {ScrollArea} from "@/components/ui/scroll-area";
-import {time,price,type Service} from "@/lib/booking";
+import {time} from "@/lib/booking";
 
-type Booking={id:string,date:string,start:number,end:number,service:string,name:string,phone:string,status:string,barber:string};
-type CustomerDetail={phone:string,name:string,createdAt:string|null,totalVisits:number,totalSpent:number,lastService:string|null,lastVisit:string|null,history:any[]};
+import {bookingPrice,type Booking} from "@/lib/booking-history";
+type CustomerDetail={phone:string,name:string,createdAt:string|null,totalVisits:number,totalSpent:number,lastService:string|null,lastVisit:string|null,history:Booking[]};
 type StatusKey="agendado"|"confirmado"|"em_atendimento"|"finalizado"|"cancelado"|"nao_compareceu";
 const STATUS_CONFIG:Record<StatusKey,{label:string;color:string,bg:string,icon:any}>={
   agendado:{label:"Agendado",color:"#6366f1",bg:"#eef2ff",icon:Clock},
@@ -36,7 +36,7 @@ function relativeDate(dateStr:string){
 }
 function todayStr(){return new Intl.DateTimeFormat("en-CA",{timeZone:"America/Sao_Paulo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date())}
 
-export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],services:Service[],onData:(d:any)=>void}){
+export function AgendaTimeline({bookings,onData}:{bookings:Booking[],onData:(d:any)=>void}){
   const[now,setNow]=useState(getNowMinutes());
   const[today,setToday]=useState(todayStr);
   const[expandedHistory,setExpandedHistory]=useState(false);
@@ -140,8 +140,8 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
             <div className="tl-next-time">{time(nextBooking.start)}</div>
             <div className="tl-next-info">
               <div className="tl-next-name">{nextBooking.name}</div>
-              <div className="tl-next-service">{nextBooking.service} • {(services.find(s=>s.id===nextBooking.service)?.duration)||30} min</div>
-              <div className="tl-next-barber">Barbeiro: {nextBooking.barber==="qualquer"?"Qualquer disponível":nextBooking.barber}</div>
+              <div className="tl-next-service">{nextBooking.serviceName} • {nextBooking.durationMinutes} min</div>
+              <div className="tl-next-barber">Barbeiro: {nextBooking.barberName}</div>
             </div>
             {selectedDate===today&&minutesUntil(nextBooking.start)&&<div className="tl-next-countdown">Faltam {minutesUntil(nextBooking.start)}</div>}
           </div>
@@ -163,8 +163,7 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
             const isPast=isPastAppointment(booking,today,now);
             const isCurrent=currentBooking?.id===booking.id;
             const isFuture=booking.date>today||(booking.date===today&&booking.start>now);
-            const svc=services.find(s=>s.id===booking.service);
-            const duration=svc?.duration||(booking.end-booking.start);
+            const duration=booking.durationMinutes;
             return(
               <div key={booking.id} className="tl-item-wrapper">
                 {showNowMarker&&i===nowMarkerIndex&&nowMarker}
@@ -186,20 +185,20 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
                         <div className="tl-card-name">{booking.name}</div>
                         <div className="tl-card-service">
                           <Scissors size={13}/>
-                          <span>{booking.service||"Serviço"}</span>
+                          <span>{booking.serviceName}</span>
                           <span className="tl-card-dot">•</span>
                           <Timer size={13}/>
                           <span>{duration} min</span>
                         </div>
                         <div className="tl-card-barber">
                           <User size={12}/>
-                          <span>{booking.barber==="qualquer"?"Qualquer disponível":booking.barber}</span>
+                          <span>{booking.barberName}</span>
                         </div>
                       </div>
                       <Badge className={"tl-badge "+status} style={{backgroundColor:cfg.bg,color:cfg.color,borderColor:cfg.color+"33"}}>{cfg.label}</Badge>
                     </div>
                     <div className="tl-card-footer">
-                      <span className="tl-card-price">{price(svc?.priceCents??null)}</span>
+                      <span className="tl-card-price">{bookingPrice(booking)}</span>
                       <span className="tl-card-phone"><Phone size={12}/>{booking.phone}</span>
                     </div>
                   </div>
@@ -217,7 +216,7 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
           {detailBooking&&<>
             <SheetHeader>
               <SheetTitle className="tl-drawer-title">{detailBooking.name}</SheetTitle>
-              <SheetDescription>{detailBooking.service} • {time(detailBooking.start)} – {time(detailBooking.end)}</SheetDescription>
+              <SheetDescription>{detailBooking.serviceName} • {time(detailBooking.start)} – {time(detailBooking.end)}</SheetDescription>
             </SheetHeader>
             <ScrollArea className="tl-drawer-scroll">
               <div className="tl-drawer-body">
@@ -234,10 +233,10 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
                   <div className="tl-drawer-grid">
                     <div className="tl-drawer-field"><span className="tl-drawer-label">Data</span><span>{relativeDate(detailBooking.date)}</span></div>
                     <div className="tl-drawer-field"><span className="tl-drawer-label">Horário</span><span>{time(detailBooking.start)} – {time(detailBooking.end)}</span></div>
-                    <div className="tl-drawer-field"><span className="tl-drawer-label">Serviço</span><span>{detailBooking.service}</span></div>
-                    <div className="tl-drawer-field"><span className="tl-drawer-label">Barbeiro</span><span>{detailBooking.barber==="qualquer"?"Qualquer disponível":detailBooking.barber}</span></div>
-                    <div className="tl-drawer-field"><span className="tl-drawer-label">Duração</span><span>{(services.find(s=>s.id===detailBooking.service)?.duration)||(detailBooking.end-detailBooking.start)} min</span></div>
-                    <div className="tl-drawer-field"><span className="tl-drawer-label">Valor</span><span>{price(services.find(s=>s.id===detailBooking.service)?.priceCents??null)}</span></div>
+                    <div className="tl-drawer-field"><span className="tl-drawer-label">Serviço</span><span>{detailBooking.serviceName}</span></div>
+                    <div className="tl-drawer-field"><span className="tl-drawer-label">Barbeiro</span><span>{detailBooking.barberName}</span></div>
+                    <div className="tl-drawer-field"><span className="tl-drawer-label">Duração</span><span>{detailBooking.durationMinutes} min</span></div>
+                    <div className="tl-drawer-field"><span className="tl-drawer-label">Valor</span><span>{bookingPrice(detailBooking)}</span></div>
                     <div className="tl-drawer-field"><span className="tl-drawer-label">Telefone</span><span>{detailBooking.phone}</span></div>
                   </div>
                 </div>
@@ -248,14 +247,14 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
                   <div className="tl-drawer-section">
                     <h4>Cliente</h4>
                     <div className="tl-drawer-grid">
-                      <div className="tl-drawer-field"><span className="tl-drawer-label">Nome</span><span>{customerDetail.name}</span></div>
+                      <div className="tl-drawer-field"><span className="tl-drawer-label">Nome no agendamento</span><span>{detailBooking.name}</span></div>
                       <div className="tl-drawer-field"><span className="tl-drawer-label">Visitas</span><span>{customerDetail.totalVisits}</span></div>
                       {customerDetail.lastVisit&&<div className="tl-drawer-field"><span className="tl-drawer-label">Último atendimento</span><span>{relativeDate(customerDetail.lastVisit)}</span></div>}
                       {customerDetail.history.length>0&&(
                         <div className="tl-drawer-field full">
                           <span className="tl-drawer-label">Serviços realizados</span>
                           <div className="tl-drawer-services">
-                            {[...new Set(customerDetail.history.map((h:any)=>h.service))].map(s=><Badge key={s} variant="outline" className="tl-drawer-service-badge">{s}</Badge>)}
+                            {[...new Set(customerDetail.history.map(h=>h.serviceName))].map(s=><Badge key={s} variant="outline" className="tl-drawer-service-badge">{s}</Badge>)}
                           </div>
                         </div>
                       )}

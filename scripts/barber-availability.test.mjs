@@ -46,7 +46,7 @@ test('closing at 19:30 allows only services that fit completely before closing',
 function database() {
   const db = new DatabaseSync(':memory:');
   db.exec(`CREATE TABLE barbers(id TEXT PRIMARY KEY,name TEXT,active INTEGER,position INTEGER);
-    CREATE TABLE bookings(id TEXT PRIMARY KEY,date TEXT,start INTEGER,"end" INTEGER,service TEXT,name TEXT,phone TEXT,barber TEXT,created_at TEXT,status TEXT DEFAULT 'agendado');
+    CREATE TABLE bookings(id TEXT PRIMARY KEY,date TEXT,start INTEGER,"end" INTEGER,service TEXT,name TEXT,phone TEXT,barber TEXT,created_at TEXT,status TEXT DEFAULT 'agendado',service_name TEXT,duration_minutes INTEGER,price_cents INTEGER,barber_name TEXT,snapshot_version INTEGER DEFAULT 0);
     INSERT INTO barbers VALUES ('qualquer','Qualquer disponível',1,0),('x','Carlos',1,1),('y','Pedro',1,2);`);
   return db;
 }
@@ -54,7 +54,7 @@ function reserve(db, id, barber = 'qualquer', start = 600, end = 630) {
   db.exec('BEGIN');
   try {
     db.prepare(assignLegacyBookingsSql).run('2026-10-01');
-    const result = db.prepare(reserveBarberSql).run(id, '2026-10-01', start, end, 'corte', 'Cliente', '5546999999999', 'now', barber, barber, '2026-10-01', end, start);
+    const result = db.prepare(reserveBarberSql).run(id, '2026-10-01', start, end, 'corte', 'Cliente', '5546999999999', 'now', 'Corte', end-start, 3500, barber, barber, '2026-10-01', end, start);
     db.exec('COMMIT');
     return result.changes;
   } catch (error) { db.exec('ROLLBACK'); throw error; }

@@ -4,6 +4,7 @@ import {normalizePhone} from "@/lib/phone";
 import {today,validDate,validHours,type Block,type BlockedPhone} from "@/lib/booking";
 import {loadConfig} from "@/lib/site-config";
 import {hasSameOrigin} from "@/lib/request-origin";
+import {bookingHistoryColumns,type Booking} from "@/lib/booking-history";
 
 const noStore={"Cache-Control":"no-store"};
 const fail=(error:string,status=400)=>Response.json({error},{status,headers:noStore});
@@ -22,7 +23,7 @@ async function dashboard(username:string){
     loadConfig(),
     db().prepare('SELECT id,date,start,"end",reason FROM schedule_blocks WHERE date >= ? ORDER BY date,start').bind(today()).all<Block>(),
     db().prepare('SELECT phone,reason,created_at AS "createdAt" FROM blocked_phones ORDER BY created_at DESC').all<BlockedPhone>(),
-    db().prepare('SELECT id,date,start,"end",service,name,phone,status,barber FROM bookings ORDER BY date,start').all(),
+    db().prepare(`SELECT ${bookingHistoryColumns} FROM bookings ORDER BY date,start`).all<Booking>(),
     db().prepare('SELECT id,name,active,position FROM barbers ORDER BY position,name').all()
   ]);
   const services=config.services||[];

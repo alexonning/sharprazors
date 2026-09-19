@@ -47,9 +47,9 @@ export async function POST(req: Request) {
     const results = await database.batch([
       database.prepare(assignLegacyBookingsSql).bind(date),
       database.prepare(reserveBarberSql)
-        .bind(id,date,start,end,service.id,name,phone,now,barber,barber,date,end,start),
+        .bind(id,date,start,end,service.id,name,phone,now,service.name,service.duration,service.priceCents,barber,barber,date,end,start),
       database.prepare("INSERT INTO customers (phone,name,created_at) SELECT phone,name,created_at FROM bookings WHERE id=? ON CONFLICT(phone) DO NOTHING").bind(id),
-      database.prepare('SELECT b.barber,p.name AS "barberName" FROM bookings b JOIN barbers p ON p.id=b.barber WHERE b.id=?').bind(id)
+      database.prepare('SELECT barber,barber_name AS "barberName" FROM bookings WHERE id=?').bind(id)
     ],{serializeBookings:true});
     if (!results[1].meta.changes)
       return Response.json({ error: "Esse horário acabou de ser reservado. Escolha outro horário." }, { status: 409 });

@@ -36,6 +36,13 @@
       "when": 1789352985687,
       "tag": "0004_blocked_phones",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1789840113778,
+      "tag": "0005_booking_history",
+      "breakpoints": true
     }
   ]
 }
