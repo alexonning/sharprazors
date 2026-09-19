@@ -2,6 +2,7 @@
 import {useEffect,useState,useCallback,useMemo} from "react";
 import {Calendar,Plus,ChevronLeft,ChevronRight,Phone,Clock,User,Scissors,DollarSign,Timer,CheckCircle2,XCircle,AlertCircle,PlayCircle,StopCircle,RefreshCw,MessageCircle,History,MapPin} from "lucide-react";
 import {Button} from "@/components/ui/button";
+import {DateCalendar} from "@/components/date-calendar";
 import {MultiSelect} from "@/components/ui/multi-select";
 import {agendaTitle,agendaHistory,isPastAppointment,filterCustomers} from "@/lib/agenda";
 import {Badge} from "@/components/ui/badge";
@@ -105,9 +106,9 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
     changeDate(d.toISOString().slice(0,10));
   };
 
-  const openWhatsApp=(phone:string)=>{
+  const openWhatsApp=(phone:string,name:string)=>{
     const num=phone.replace(/\D/g,"");
-    window.open(`https://wa.me/${num}`,"_blank");
+    window.open(`https://wa.me/${num}?text=${encodeURIComponent(`Olá ${name}`)}`,"_blank");
   };
 
   return(
@@ -119,6 +120,7 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
             <p className="tl-date">{longDateBR(selectedDate)}</p>
           </div>
           <div className="tl-nav">
+            <DateCalendar value={selectedDate} onChange={changeDate} label="Data da agenda"/>
             <Button variant="outline" size="sm" className="tl-nav-btn" onClick={()=>changeDate(today)} disabled={selectedDate===today}>Hoje</Button>
             <Button variant="ghost" size="sm" className="tl-nav-btn" onClick={()=>navigateDate(-1)}><ChevronLeft size={16}/></Button>
             <Button variant="ghost" size="sm" className="tl-nav-btn" onClick={()=>navigateDate(1)}><ChevronRight size={16}/></Button>
@@ -282,7 +284,7 @@ export function AgendaTimeline({bookings,services,onData}:{bookings:Booking[],se
                 </div>
 
                 <div className="tl-drawer-actions">
-                  <Button variant="outline" className="tl-action-btn" onClick={()=>openWhatsApp(detailBooking.phone)}><MessageCircle size={16}/>WhatsApp</Button>
+                  <Button variant="outline" className="tl-action-btn" onClick={()=>openWhatsApp(detailBooking.phone,detailBooking.name)}><MessageCircle size={16}/>WhatsApp</Button>
                   {getStatus(detailBooking.status)==="confirmado"&&<Button className="tl-action-btn primary" onClick={()=>updateStatus(detailBooking.id,"em_atendimento")} disabled={updatingStatus===detailBooking.id}><PlayCircle size={16}/>Iniciar</Button>}
                   {getStatus(detailBooking.status)==="em_atendimento"&&<Button className="tl-action-btn primary" onClick={()=>updateStatus(detailBooking.id,"finalizado")} disabled={updatingStatus===detailBooking.id}><StopCircle size={16}/>Finalizar</Button>}
                 </div>

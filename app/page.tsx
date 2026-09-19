@@ -6,6 +6,7 @@ import {RadioGroup,RadioGroupItem} from "@/components/ui/radio-group";
 import {Select,SelectContent,SelectGroup,SelectItem,SelectLabel,SelectTrigger,SelectValue} from "@/components/ui/select";
 import {Input} from "@/components/ui/input";
 import {PhoneInput} from "@/components/phone-input";
+import {DateCalendar} from "@/components/date-calendar";
 import {defaultBarber,type AvailableBarber} from "@/lib/barber-availability";
 import {normalizePhone,formatPhone} from "@/lib/phone";
 import {today,time,price,hoursSummary,type SiteConfig} from "@/lib/booking";
@@ -51,8 +52,8 @@ async function submit(e:React.FormEvent){
  try{
   if(customerState==="unknown"){
    const r=await fetch("/api/customers/lookup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone})});
-   const d=await r.json() as {code?:string,error?:string,registered:boolean};if(!r.ok){if(d.code==="PHONE_BLOCKED")setBlocked(true);throw Error(d.error)}
-   setCustomerState(d.registered?"existing":"new");return;
+   const d=await r.json() as {code?:string,error?:string,registered:boolean,name:string|null};if(!r.ok){if(d.code==="PHONE_BLOCKED")setBlocked(true);throw Error(d.error)}
+   setName(d.name??"");setCustomerState(d.registered?"existing":"new");return;
   }
    const r=await fetch("/api/bookings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({service,date,start:slot,barber,...(customerState==="new"?{name}:{}),phone})});
   const d=await r.json() as {code?:string,error?:string,barber:string,id:string};if(!r.ok){if(d.code==="NAME_REQUIRED")setCustomerState("new");if(d.code==="PHONE_BLOCKED")setBlocked(true);if(r.status===409){setStep(1);setReload(x=>x+1)}throw Error(d.error)}setBarber(d.barber);setBooking(d.id);
@@ -65,7 +66,7 @@ return <div className="site"><header className="header"><a href="/" className="b
 {booking?<div ref={panelRef} className="success"><div className="success-icon"><Check size={34}/></div><p className="eyebrow">TUDO CERTO</p><h2>Horário reservado!</h2><p>Seu agendamento está registrado.</p><div className="receipt"><strong>{selected?.name}</strong><span>{prettyDate} às {time(slot!)}</span><span>{barbersList.find(b=>b.id===barber)?.name||"Qualquer disponível"} · {selected?.duration} min</span><small>Comprovante: {booking.slice(0,8).toUpperCase()}</small></div><p className="fine">Guarde este comprovante. Para alterações, entre em contato com a barbearia pelo WhatsApp ou Instagram.</p><Button className="primary" onClick={()=>{setBooking(null);setStep(0);setName("");setPhone("");setBarber("qualquer");setCustomerState("unknown");setReload(x=>x+1)}}>Fazer outro agendamento <ArrowRight/></Button></div>:<div ref={panelRef} className="panel-body">
 <div className="section-heading"><p className="eyebrow">ETAPA 0{step+1} DE 03</p><h2>{["O que vai ser hoje?","Escolha o seu horário.","Finalizar."][step]}</h2><p>{["Escolha o serviço para o seu próximo atendimento.","Escolha a data, o horário e o barbeiro disponível.","Informe seus dados para confirmar o atendimento."][step]}</p></div>
 {step===0&&(site?<><RadioGroup value={service} onValueChange={setService} className={"service-list"+(site.services.length>4?" is-scrollable":"")} aria-label="Serviço">{site.services.map((s,i)=><label key={s.id} className={"service-card "+(service===s.id?"selected":"")} htmlFor={"service-"+s.id}><span className="service-number">{String(i+1).padStart(2,"0")}</span><div className="service-copy"><h3>{s.name}</h3><span className="duration"><Clock size={13}/>{s.duration} min <b>·</b> {price(s.priceCents)}</span></div><RadioGroupItem value={s.id} id={"service-"+s.id}/></label>)}</RadioGroup><div className="quiet-note"><ShieldCheck size={17}/> O valor do serviço é confirmado com a barbearia.</div></>:<p className="loading-note" role={siteError?"alert":undefined}>{siteError||"Carregando serviços…"}</p>)}
-{step===1&&<div className="date-selection"><label htmlFor="date">Data do atendimento</label><Input id="date" type="date" min={today()} max={new Date(Date.now()+89*86400000).toISOString().slice(0,10)} value={date} onChange={e=>setDate(e.target.value)}/><div className="availability" aria-live="polite">{loading?<p>Consultando horários…</p>:available.length===0?<div className="empty"><CalendarDays/><p>Nenhum horário disponível nesta data.</p><span>Selecione outro dia para continuar.</span></div>:<TimeWheel values={available} value={slot} onChange={chooseSlot}/>}</div><div className="barber-field">
+{step===1&&<div className="date-selection"><label htmlFor="date">Data do atendimento</label><DateCalendar id="date" inline label="Data do atendimento" min={today()} max={new Date(Date.now()+89*86400000).toISOString().slice(0,10)} value={date} onChange={setDate}/><div className="availability" aria-live="polite">{loading?<p>Consultando horários…</p>:available.length===0?<div className="empty"><CalendarDays/><p>Nenhum horário disponível nesta data.</p><span>Selecione outro dia para continuar.</span></div>:<TimeWheel values={available} value={slot} onChange={chooseSlot}/>}</div><div className="barber-field">
 <label htmlFor="booking-barber">Barbeiro</label>
 <Select value={barber} onValueChange={setBarber} disabled={saving||loading||slot===null}>
 <SelectTrigger id="booking-barber" className="w-full"><SelectValue placeholder="Selecione o barbeiro"/></SelectTrigger>
@@ -81,7 +82,7 @@ return <div className="site"><header className="header"><a href="/" className="b
 <PhoneInput id="phone" describedBy="phone-help" disabled={saving} value={phone} onChange={value=>{setPhone(value);setCustomerState("unknown");setName("");setError("");setBlocked(false)}}/>
 <p id="phone-help" className="phone-help">Use o mesmo número nos próximos agendamentos.</p>
 <div aria-live="polite">
-{customerState==="existing"&&<div className="customer-found"><Check size={20}/><div><strong>Telefone já cadastrado.</strong><p>Confira o horário abaixo e confirme sua reserva.</p></div></div>}
+{customerState==="existing"&&<div className="customer-found"><Check size={20}/><div><strong>Bem vindo de volta {name}</strong><p>Confira o horário abaixo e confirme sua reserva.</p></div></div>}
 {customerState==="new"&&<div className="new-customer"><p>Primeira vez com este telefone? Informe seu nome para o cadastro.</p><label htmlFor="name">Nome completo</label><Input id="name" autoComplete="name" placeholder="Seu nome completo" required minLength={3} maxLength={100} disabled={saving} value={name} onChange={e=>setName(e.target.value)}/></div>}
 </div>
 {customerState!=="unknown"&&<div className="confirmation-summary"><span>SEU AGENDAMENTO</span><strong>{selected?.name}</strong><p>{prettyDate} às {slot===null?"—":time(slot)} · {selected?.duration} min · {barbersList.find(b=>b.id===barber)?.name||"Qualquer disponível"}</p></div>}

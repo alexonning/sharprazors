@@ -11,8 +11,7 @@ export async function POST(req: Request) {
   try {
     if (await isPhoneBlocked(phone)) return Response.json({ error: blockedPhoneError, code: blockedPhoneCode }, { status: 403 });
     const customer = await findCustomer(phone);
-    // A phone lookup never exposes the customer's name or booking history.
-    return Response.json({ registered: !!customer }, { headers: { "Cache-Control": "no-store" } });
+    return Response.json({ registered: !!customer, name: customer?.name ?? null }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     console.error("customer lookup failed", e);
     return Response.json({ error: "Não foi possível consultar o cadastro. Tente novamente." }, { status: 503 });

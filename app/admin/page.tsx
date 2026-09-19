@@ -6,7 +6,8 @@ import {Input} from "@/components/ui/input";
 import {PhoneInput} from "@/components/phone-input";
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription,DialogFooter,DialogClose} from "@/components/ui/dialog";
 import {formatPhone} from "@/lib/phone";
-import {minutes,time,today,weekdays,type Block,type BlockedPhone,type DayHours,type Period,type Service,type SiteConfig} from "@/lib/booking";
+import {minutes,time,today,type Block,type BlockedPhone,type DayHours,type Service,type SiteConfig} from "@/lib/booking";
+import {AvailabilityScheduler} from "@/components/admin/availability-scheduler";
 import {AgendaTimeline} from "@/components/admin/agenda-timeline";
 
 type Barber={id:string,name:string,active:number,position:number};
@@ -15,7 +16,6 @@ type Dashboard=SiteConfig&{username:string,blocks:Block[],blockedPhones:BlockedP
 type Tab="contato"|"horarios"|"servicos"|"barbeiros"|"ausencias"|"bloqueios"|"senha"|"agenda";
 type Ctx={data:Dashboard,onData:(data:Dashboard)=>void,onExpired:()=>void};
 const tabs:{id:Tab,label:string,Icon:typeof Clock}[]=[{id:"agenda",label:"Agenda",Icon:Calendar},{id:"contato",label:"Contato",Icon:Phone},{id:"horarios",label:"Horário de funcionamento",Icon:Clock},{id:"servicos",label:"Serviços e valores",Icon:Scissors},{id:"barbeiros",label:"Barbeiros",Icon:Users},{id:"ausencias",label:"Ausências",Icon:CalendarOff},{id:"bloqueios",label:"Telefones bloqueados",Icon:Ban},{id:"senha",label:"Alterar senha",Icon:KeyRound}];
-const dayOrder=[1,2,3,4,5,6,0];
 const maxDate=()=>new Date(Date.now()+89*86400000).toISOString().slice(0,10);
 const longDate=(date:string)=>new Date(date+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"});
 
@@ -55,19 +55,10 @@ function ContactTab(ctx:Ctx){
 function HoursTab(ctx:Ctx){
  const action=useAction(ctx);
  const [hours,setHours]=useState<DayHours[]>(()=>structuredClone(ctx.data.hours));
- const update=(day:number,change:(d:DayHours)=>DayHours)=>setHours(list=>list.map((d,i)=>i===day?change(d):d));
- function setEdge(day:number,index:number,edge:0|1,value:string){const n=minutes(value);if(n!==null)update(day,d=>({...d,periods:d.periods.map((p,i)=>i===index?(edge===0?[n,p[1]]:[p[0],n]) as Period:p)}))}
  async function save(e:React.FormEvent){e.preventDefault();const data=await action.run({action:"hours",hours},"Horário de funcionamento atualizado. A agenda do site já segue a nova grade.");if(data)setHours(structuredClone(data.hours))}
  return <form className="admin-form" onSubmit={save}>
   <Heading title="Horário de funcionamento" text="Defina os dias e períodos de atendimento. Os horários oferecidos no agendamento seguem esta grade, em intervalos de 5 minutos."/>
-  <div className="day-list">{dayOrder.map(day=>{const d=hours[day];return <div key={day} className={"day-row"+(d.closed?" is-closed":"")}>
-   <div className="day-head"><strong>{weekdays[day]}</strong><label className="admin-check"><input type="checkbox" checked={!d.closed} onChange={e=>{const opened=e.target.checked;update(day,x=>({closed:!opened,periods:opened&&x.periods.length===0?[[480,720]]:x.periods}))}}/>Aberto</label></div>
-   {d.closed?<p className="day-closed">Sem atendimento</p>:<div className="periods">{d.periods.map((p,i)=><div className="period" key={i}>
-    <Input type="time" step={300} aria-label={`${weekdays[day]}: início do período ${i+1}`} value={time(p[0])} onChange={e=>setEdge(day,i,0,e.target.value)}/><span>até</span>
-    <Input type="time" step={300} aria-label={`${weekdays[day]}: fim do período ${i+1}`} value={time(Math.min(p[1],1439))} onChange={e=>setEdge(day,i,1,e.target.value)}/>
-    <button type="button" className="icon-button" aria-label={`Remover período ${i+1} de ${weekdays[day]}`} onClick={()=>update(day,x=>({...x,periods:x.periods.filter((_,j)=>j!==i)}))}><Trash2 size={16}/></button>
-   </div>)}{d.periods.length<4&&<button type="button" className="text-button" onClick={()=>update(day,x=>{const from=x.periods.length?x.periods[x.periods.length-1][1]+60:480;return {...x,periods:[...x.periods,[Math.min(from,1380),Math.min(from+120,1439)]]}})}><Plus size={15}/> Adicionar período</button>}</div>}
-  </div>})}</div>
+  <AvailabilityScheduler value={hours} onChange={setHours} disabled={action.busy}/>
   <Feedback action={action}/><SaveFooter busy={action.busy} label="Salvar horários"/>
  </form>;
 }
