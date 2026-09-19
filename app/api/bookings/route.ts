@@ -10,8 +10,10 @@ export async function GET(req:Request){
     const q=new URL(req.url).searchParams;
     const date=q.get("date")||"";
     const config=await loadConfig();
-    const service=config.services.find(s=>s.id===q.get("service"));
-    if(!service||!validDate(date))return Response.json({error:"Selecione uma data válida nos próximos 90 dias."},{status:400});
+    const serviceIds=(q.get("service")||"").split(",").filter(Boolean);
+    const selectedServices=config.services.filter(s=>serviceIds.includes(s.id));
+    const service=selectedServices.length===serviceIds.length&&selectedServices.length?{id:serviceIds.join(","),name:selectedServices.map(s=>s.name).join(" + "),duration:selectedServices.reduce((n,s)=>n+s.duration,0),priceCents:selectedServices.some(s=>s.priceCents===null)?null:selectedServices.reduce((n,s)=>n+(s.priceCents??0),0)}:null;
+    if(!service||!validDate(date))return Response.json({error:"Selecione ao menos um serviço e uma data válida."},{status:400});
     const [rows,blocks,professionals]=await Promise.all([
       db().prepare('SELECT start,"end",barber,status FROM bookings WHERE date=?').bind(date).all<BusyBooking>(),
       blocksOn(date),
@@ -32,7 +34,9 @@ export async function POST(req: Request) {
   const phone = normalizePhone(body?.phone);
   try {
     const config = await loadConfig();
-    const service = config.services.find(s => s.id === serviceId);
+    const serviceIds=typeof serviceId==="string"?serviceId.split(",").filter(Boolean):[];
+    const selectedServices=config.services.filter(s=>serviceIds.includes(s.id));
+    const service=selectedServices.length===serviceIds.length&&selectedServices.length?{id:serviceIds.join(","),name:selectedServices.map(s=>s.name).join(" + "),duration:selectedServices.reduce((n,s)=>n+s.duration,0),priceCents:selectedServices.some(s=>s.priceCents===null)?null:selectedServices.reduce((n,s)=>n+(s.priceCents??0),0)}:null;
     if (!phone || typeof date !== "string" || !service || !Number.isInteger(start) || !slots(date, service.duration, config.hours, await blocksOn(date)).includes(start))
       return Response.json({ error: "Confira telefone e horário selecionado." }, { status: 400 });
     if (await isPhoneBlocked(phone))
