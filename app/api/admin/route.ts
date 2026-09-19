@@ -19,15 +19,24 @@ function buildServiceColors(services:{id:string}[]):Record<string,string>{
 }
 
 async function dashboard(username:string){
-  const [config,blocks,blockedPhones,bookings,barbers]=await Promise.all([
+  const [config,blocks,blockedPhones,bookings,barbers,customerRows]=await Promise.all([
     loadConfig(),
     db().prepare('SELECT id,date,start,"end",reason FROM schedule_blocks WHERE date >= ? ORDER BY date,start').bind(today()).all<Block>(),
     db().prepare('SELECT phone,reason,created_at AS "createdAt" FROM blocked_phones ORDER BY created_at DESC').all<BlockedPhone>(),
     db().prepare(`SELECT ${bookingHistoryColumns} FROM bookings ORDER BY date,start`).all<Booking>(),
-    db().prepare('SELECT id,name,active,position FROM barbers ORDER BY position,name').all()
+    db().prepare('SELECT id,name,active,position FROM barbers ORDER BY position,name').all(),
+    db().prepare('SELECT phone,name,created_at AS "createdAt" FROM customers ORDER BY name,phone').all<{phone:string,name:string,createdAt:string}>()
   ]);
   const services=config.services||[];
-  return {username,...config,blocks:blocks.results,blockedPhones:blockedPhones.results,bookings:bookings.results,barbers:barbers.results,serviceColors:buildServiceColors(services)};
+  const customers=new Map<string,{phone:string,name:string,createdAt:string|null}>();
+  for(const booking of bookings.results){
+    if(!customers.has(booking.phone))customers.set(booking.phone,{phone:booking.phone,name:booking.name,createdAt:booking.createdAt});
+  }
+  for(const customer of customerRows.results){
+    const existing=customers.get(customer.phone);
+    customers.set(customer.phone,{phone:customer.phone,name:customer.name||existing?.name||"",createdAt:customer.createdAt||existing?.createdAt||null});
+  }
+  return {username,...config,blocks:blocks.results,blockedPhones:blockedPhones.results,bookings:bookings.results,barbers:barbers.results,customers:[...customers.values()].sort((a,b)=>a.name.localeCompare(b.name,"pt-BR")||a.phone.localeCompare(b.phone)),serviceColors:buildServiceColors(services)};
 }
 
 export async function GET(req:Request){
@@ -124,6 +133,20 @@ export async function POST(req:Request){
         if(typeof body.phone!=="string")return fail("Telefone inválido.");
         await db().prepare("DELETE FROM blocked_phones WHERE phone=?").bind(body.phone).run();
         break;
+      case "updateCustomer":{
+        const currentPhone=normalizePhone(body.currentPhone),phone=normalizePhone(body.phone);
+        const name=typeof body.name==="string"?body.name.trim().replace(/\s+/g," "):"";
+        if(!currentPhone||!phone)return fail("Informe um telefone brasileiro válido, com DDD.");
+        if(name.length<2||name.length>100)return fail("O nome do cliente deve ter entre 2 e 100 caracteres.");
+        if(currentPhone!==phone){
+          const taken=await db().prepare("SELECT phone FROM customers WHERE phone=?").bind(phone).first<{phone:string}>();
+          if(taken)return fail("Este telefone já está cadastrado para outro cliente.");
+        }
+        const existing=await db().prepare("SELECT phone FROM customers WHERE phone=?").bind(currentPhone).first<{phone:string}>();
+        if(existing)await db().prepare("UPDATE customers SET phone=?,name=? WHERE phone=?").bind(phone,name,currentPhone).run();
+        else await db().prepare("INSERT INTO customers (phone,name,created_at) VALUES (?,?,?)").bind(phone,name,new Date().toISOString()).run();
+        break;
+      }
       case "updateBookingStatus":{
         if(typeof body.id!=="string")return fail("Agendamento inválido.");
         const validStatuses=["agendado","confirmado","em_atendimento","finalizado","cancelado","nao_compareceu"];
