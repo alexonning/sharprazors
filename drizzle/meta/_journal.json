@@ -43,6 +43,13 @@
       "when": 1789840113778,
       "tag": "0005_booking_history",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789845000000,
+      "tag": "0006_freeze_legacy_booking_prices",
+      "breakpoints": true
     }
   ]
 }

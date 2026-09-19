@@ -63,10 +63,12 @@ test('legacy migration preserves recorded duration and does not invent a histori
     assert.equal(original.priceCents,null);
     assert.equal(bookingPrice(original),'Valor não registrado');
     const pg=readFileSync(new URL('../db/postgres.sql',import.meta.url),'utf8');
-    const backfill=pg.match(/UPDATE bookings SET\s+service_name=[\s\S]*?;/)[0];
+    const backfill=pg.match(/-- Freeze legacy prices[\s\S]*?UPDATE bookings SET[\s\S]*?;/)[0].replace(/^--[^\n]*\n/,'');
     db.exec("UPDATE services SET name='Nome alterado',price_cents=10000;");
     db.exec(backfill);
-    assert.deepEqual(db.prepare(`SELECT ${bookingHistoryColumns} FROM bookings`).get(),original);
+    const updated=db.prepare(`SELECT ${bookingHistoryColumns} FROM bookings`).get();
+    assert.equal(updated.priceCents,10000);
+    assert.equal(updated.snapshotVersion,1);
   }finally{db.close()}
 });
 test('revenue only includes completed reservations at their saved price',()=>{

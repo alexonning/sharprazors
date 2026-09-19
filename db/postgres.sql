@@ -32,7 +32,7 @@ UPDATE bookings SET
   service_name=COALESCE(service_name,(SELECT name FROM services WHERE services.id=bookings.service),service),
   barber_name=COALESCE(barber_name,(SELECT name FROM barbers WHERE barbers.id=bookings.barber),barber),
   duration_minutes=COALESCE(duration_minutes,"end"-start)
-WHERE service_name IS NULL OR barber_name IS NULL OR duration_minutes IS NULL;
+WHERE snapshot_version=0;
 
 -- Defaults for a new database only; existing rows (including ones edited in /admin) are never overwritten.
 INSERT INTO services (id, name, duration, price_cents, position, active) VALUES
@@ -40,6 +40,12 @@ INSERT INTO services (id, name, duration, price_cents, position, active) VALUES
   ('barba', 'Barba', 30, NULL, 1, 1),
   ('combo', 'Corte + barba', 60, NULL, 2, 1)
 ON CONFLICT (id) DO NOTHING;
+
+-- Freeze legacy prices only after the service catalog exists. This runs once per booking.
+UPDATE bookings SET
+  price_cents=COALESCE(price_cents,(SELECT price_cents FROM services WHERE services.id=bookings.service)),
+  snapshot_version=1
+WHERE snapshot_version=0;
 INSERT INTO settings (key, value) VALUES
   ('whatsapp', '5546999073974'),
   ('phone', '5546999073974'),
