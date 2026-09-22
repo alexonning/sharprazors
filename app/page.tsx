@@ -7,6 +7,7 @@ import {Select,SelectContent,SelectGroup,SelectItem,SelectLabel,SelectTrigger,Se
 import {Input} from "@/components/ui/input";
 import {PhoneInput} from "@/components/phone-input";
 import {DateCalendar} from "@/components/date-calendar";
+import {AlertDialog,AlertDialogAction,AlertDialogContent,AlertDialogDescription,AlertDialogFooter,AlertDialogHeader,AlertDialogTitle} from "@/components/ui/alert-dialog";
 import {defaultBarber,type AvailableBarber} from "@/lib/barber-availability";
 import {normalizePhone,formatPhone} from "@/lib/phone";
 import {today,time,price,hoursSummary,type SiteConfig} from "@/lib/booking";
@@ -19,6 +20,13 @@ return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBo
 const MAP_URL="https://maps.app.goo.gl/57Cuf1TnEqRr7Qiw5";
 const MAP_EMBED_URL="https://www.google.com/maps?q=-25.670698,-53.808721&z=17&output=embed";
 const whatsappUrl=(number:string)=>"https://wa.me/"+number;
+function isPastBooking(date:string,start:number){
+ const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"America/Sao_Paulo",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date());
+ const value=Object.fromEntries(parts.map(part=>[part.type,part.value]));
+ const todayInBrasilia=`${value.year}-${value.month}-${value.day}`;
+ const currentMinutes=Number(value.hour)*60+Number(value.minute);
+ return date<todayInBrasilia||(date===todayInBrasilia&&start<=currentMinutes);
+}
 function TimeWheel({values,value,onChange}:{values:number[],value:number|null,onChange:(v:number)=>void}){
 const rail=useRef<HTMLDivElement>(null),timer=useRef<ReturnType<typeof setTimeout>|null>(null);
 const active=value===null?0:Math.max(0,values.indexOf(value));
@@ -33,6 +41,7 @@ const [availability,setAvailability]=useState<{start:number,barbers:AvailableBar
 const slotBarbers=availability.find(option=>option.start===slot)?.barbers??[];
 function chooseSlot(value:number){if(value!==slot){setSlot(value);setBarber(defaultBarber(availability.find(option=>option.start===value)?.barbers??[]))}}
 const [customerState,setCustomerState]=useState<"unknown"|"existing"|"new">("unknown");
+const [pastSlotWarning,setPastSlotWarning]=useState(false);
 const [site,setSite]=useState<SiteConfig|null>(null),[siteError,setSiteError]=useState(""),[blocked,setBlocked]=useState(false),[conflict,setConflict]=useState(false);
 const panelRef=useRef<HTMLDivElement>(null);
 useEffect(()=>{
@@ -49,30 +58,13 @@ const selectedDurationLabel=selectedDuration>=60?`${Math.floor(selectedDuration/
 const selectedPrice=selected.some(s=>s.priceCents===null)?null:selected.reduce((n,s)=>n+(s.priceCents??0),0);
 const serviceKey=service.join(",");
 const autoDateRef=useRef(false);
-useEffect(()=>{if(!selected.length)return;const abort=new AbortController();setLoading(true);setSlot(null);setBarber("qualquer");setAvailability([]);setAvailable([]);setError("");fetch(`/api/bookings?date=${date}&service=${serviceKey}`,{signal:abort.signal}).then(async r=>{const d=await r.json() as {error?:string,slots:number[],availability:{start:number,barbers:AvailableBarber[]}[],barbers:AvailableBarber[]};if(!r.ok)throw Error(d.error);setAvailable(d.slots);setAvailability(d.availability);setBarbersList(d.barbers)}).catch(e=>{if(e.name!=="AbortError"){setError(e.message);setAvailable([])}}).finally(()=>{if(!abort.signal.aborted)setLoading(false)});return()=>abort.abort()},[date,serviceKey,reload,site]);
+useEffect(()=>{if(!selected.length)return;const abort=new AbortController();setLoading(true);setSlot(null);setBarber("qualquer");setAvailability([]);setAvailable([]);setError("");(async()=>{try{const r=await fetch(`/api/bookings?date=${date}&service=${serviceKey}`,{signal:abort.signal});const d=await r.json() as {error?:string,slots:number[],availability:{start:number,barbers:AvailableBarber[]}[],barbers:AvailableBarber[]};if(!r.ok)throw Error(d.error);setAvailable(d.slots);setAvailability(d.availability);setBarbersList(d.barbers);if(date===today()&&!d.slots.length&&!autoDateRef.current){autoDateRef.current=true;for(let offset=1;offset<=89;offset++){const candidate=new Date(today()+"T12:00:00");candidate.setDate(candidate.getDate()+offset);const candidateDate=candidate.toISOString().slice(0,10);const next=await fetch(`/api/bookings?date=${candidateDate}&service=${serviceKey}`,{signal:abort.signal});const nextData=await next.json() as {slots?:number[]};if(next.ok&&nextData.slots?.length){setDate(candidateDate);return;}}autoDateRef.current=false;}}catch(e){if((e as Error).name!=="AbortError"){setError((e as Error).message);setAvailable([])}}finally{if(!abort.signal.aborted)setLoading(false)}})();return()=>abort.abort()},[date,serviceKey,reload,site]);
   useEffect(()=>{autoDateRef.current=false},[serviceKey,reload]);
   useEffect(()=>{if(date!==today())autoDateRef.current=false},[date]);
-  useEffect(()=>{
- if(!selected.length||date!==today()||loading||available.length||autoDateRef.current)return;
- autoDateRef.current=true;
- const abort=new AbortController();
- (async()=>{
-  for(let offset=1;offset<=89;offset++){
-   const candidate=new Date(today()+"T12:00:00");candidate.setDate(candidate.getDate()+offset);
-   const candidateDate=candidate.toISOString().slice(0,10);
-   try{
-    const r=await fetch(`/api/bookings?date=${candidateDate}&service=${serviceKey}`,{signal:abort.signal});
-    const d=await r.json() as {slots?:number[]};
-    if(r.ok&&d.slots?.length){setDate(candidateDate);return;}
-   }catch(e){if((e as Error).name==="AbortError")return;}
-  }
-  autoDateRef.current=false;
- })();
- return()=>abort.abort();
-},[available.length,date,loading,selected.length,serviceKey]);
 useEffect(()=>{const context=(document as any).modelContext;if(!site||!context?.registerTool)return;const life=new AbortController();Promise.resolve(context.registerTool({name:"select_booking_service",description:"Seleciona o serviço no formulário, sem criar uma reserva.",inputSchema:{type:"object",properties:{service:{type:"string",enum:site.services.map(s=>s.id)}},required:["service"],additionalProperties:false},annotations:{readOnlyHint:false},execute:async(input:any)=>{if(!site.services.some(s=>s.id===input.service))throw Error("Serviço inválido");setService([input.service]);setStep(0);return {selectedService:input.service}}},{signal:life.signal})).catch(()=>{});return()=>life.abort()},[site]);
 async function submit(e:React.FormEvent){
  e.preventDefault();if(saving)return;setError("");setBlocked(false);setConflict(false);
+ if(slot!==null&&isPastBooking(date,slot)){setPastSlotWarning(true);return;}
  if(!normalizePhone(phone)){setError("Informe um telefone brasileiro válido com DDD.");return;}
  setSaving(true);
  try{
@@ -87,7 +79,7 @@ async function submit(e:React.FormEvent){
 }
 const prettyDate=new Date(date+"T12:00:00").toLocaleDateString("pt-BR",{day:"numeric",month:"long"});
 return <div className="site"><header className="header"><a href="/" className="brand"><img src="/logo.png" alt="Barbearia Sharp Razors"/><span>SHARP RAZORS<small>BARBEARIA</small></span></a><nav><a className="active" href="#agendamento">Agendamento</a><a href="#horarios">Horários</a><a className="nav-location" href="#localizacao">Localização</a>{site?.whatsapp&&<a href={whatsappUrl(site.whatsapp)} target="_blank" rel="noreferrer" aria-label="WhatsApp da barbearia"><WhatsApp size={19}/></a>}<a href="https://www.instagram.com/barbeariasharprazors/" target="_blank" rel="noreferrer" aria-label="Instagram da barbearia"><Instagram size={19}/></a></nav></header>
-<main><div className="intro"><p className="eyebrow">BARBEARIA SHARP RAZORS</p><h1>MARQUE SEU HORÁRIO<span>.</span></h1></div>
+<main><AlertDialog open={pastSlotWarning} onOpenChange={setPastSlotWarning}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Esse horário já passou</AlertDialogTitle><AlertDialogDescription>Escolha outro horário para continuar com seu agendamento.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogAction onClick={()=>{setPastSlotWarning(false);setError("");setSlot(null);setReload(x=>x+1);setStep(1)}}>OK</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog><div className="intro"><p className="eyebrow">BARBEARIA SHARP RAZORS</p><h1>MARQUE SEU HORÁRIO<span>.</span></h1></div>
 <div className="workspace" id="agendamento"><section className="booking-panel"><div className="steps">{["Serviço","Data e horário","Finalizar"].map((s,i)=><button key={s} disabled={i>step||!!booking||saving} onClick={()=>setStep(i)} className={i===step?"current":i<step?"done":""}><span>{i<step?<Check size={15}/>:"0"+(i+1)}</span>{s}{i<2&&<ChevronRight className="step-chevron" size={15}/>}</button>)}</div>
 {booking?<div ref={panelRef} className="success"><div className="success-icon"><Check size={34}/></div><p className="eyebrow">TUDO CERTO</p><h2>Horário reservado!</h2><p>Seu agendamento está registrado.</p><div className="receipt"><strong>{selectedNames}</strong><span>{prettyDate} às {time(slot!)}</span><span>{barbersList.find(b=>b.id===barber)?.name||"Qualquer disponível"} · {selectedDurationLabel}</span><small>Comprovante: {booking.slice(0,8).toUpperCase()}</small></div><p className="fine">Guarde este comprovante. Para alterações, entre em contato com a barbearia pelo WhatsApp ou Instagram.</p><Button className="primary" onClick={()=>{setBooking(null);setStep(0);setName("");setPhone("");setBarber("qualquer");setCustomerState("unknown");setService(["corte"]);setReload(x=>x+1)}}>Fazer outro agendamento <ArrowRight/></Button></div>:<div ref={panelRef} className="panel-body">
 <div className="section-heading"><p className="eyebrow">ETAPA 0{step+1} DE 03</p><h2>{["O que vai ser hoje?","Escolha o seu horário.","Finalizar."][step]}</h2><p>{["Escolha o serviço para o seu próximo atendimento.","Escolha a data, o horário e o barbeiro disponível.","Informe seus dados para confirmar o atendimento."][step]}</p></div>
