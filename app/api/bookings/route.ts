@@ -13,13 +13,13 @@ export async function GET(req:Request){
     const serviceIds=(q.get("service")||"").split(",").filter(Boolean);
     const selectedServices=config.services.filter(s=>serviceIds.includes(s.id));
     const service=selectedServices.length===serviceIds.length&&selectedServices.length?{id:serviceIds.join(","),name:selectedServices.map(s=>s.name).join(" + "),duration:selectedServices.reduce((n,s)=>n+s.duration,0),priceCents:selectedServices.some(s=>s.priceCents===null)?null:selectedServices.reduce((n,s)=>n+(s.priceCents??0),0)}:null;
-    if(!service||!validDate(date))return Response.json({error:"Selecione ao menos um serviço e uma data válida."},{status:400});
+    if(!service||!validDate(date,config.bookingWindowDays))return Response.json({error:"Selecione ao menos um serviço e uma data válida."},{status:400});
     const [rows,blocks,professionals]=await Promise.all([
       db().prepare('SELECT start,"end",barber,status FROM bookings WHERE date=?').bind(date).all<BusyBooking>(),
       blocksOn(date),
       db().prepare("SELECT id,name FROM barbers WHERE active=1 AND id<>'qualquer' ORDER BY position,name,id").all<AvailableBarber>()
     ]);
-    const availability=slots(date,service.duration,config.hours,blocks)
+    const availability=slots(date,service.duration,config.hours,blocks,config.minAdvanceMinutes,config.bookingWindowDays)
       .map(start=>({start,barbers:freeBarbers(start,service.duration,professionals.results,rows.results)}))
       .filter(slot=>slot.barbers.length>0);
     return Response.json({slots:availability.map(slot=>slot.start),availability,barbers:professionals.results},{headers:{"Cache-Control":"no-store"}});
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     const serviceIds=typeof serviceId==="string"?serviceId.split(",").filter(Boolean):[];
     const selectedServices=config.services.filter(s=>serviceIds.includes(s.id));
     const service=selectedServices.length===serviceIds.length&&selectedServices.length?{id:serviceIds.join(","),name:selectedServices.map(s=>s.name).join(" + "),duration:selectedServices.reduce((n,s)=>n+s.duration,0),priceCents:selectedServices.some(s=>s.priceCents===null)?null:selectedServices.reduce((n,s)=>n+(s.priceCents??0),0)}:null;
-    if (!phone || typeof date !== "string" || !service || !Number.isInteger(start) || !slots(date, service.duration, config.hours, await blocksOn(date)).includes(start))
+    if (!phone || typeof date !== "string" || !service || !Number.isInteger(start) || !slots(date, service.duration, config.hours, await blocksOn(date),config.minAdvanceMinutes,config.bookingWindowDays).includes(start))
       return Response.json({ error: "Confira telefone e horário selecionado." }, { status: 400 });
     if (await isPhoneBlocked(phone))
       return Response.json({ error: blockedPhoneError, code: blockedPhoneCode }, { status: 403 });

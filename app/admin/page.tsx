@@ -1,12 +1,13 @@
 "use client";
 import {useEffect,useState} from "react";
-import {ArrowRight,Ban,Calendar,CalendarOff,Check,ChevronDown,ChevronRight,ChevronUp,Clock,KeyRound,LogOut,Phone,Plus,Scissors,Trash2,Users,UserCheck,UserX} from "lucide-react";
+import {ArrowRight,Ban,Calendar,CalendarOff,Check,ChevronDown,ChevronRight,ChevronUp,Clock,LogOut,Phone,Plus,Scissors,Settings,Trash2,Users,UserCheck,UserX} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
+import {Select,SelectContent,SelectItem,SelectTrigger,SelectValue} from "@/components/ui/select";
 import {PhoneInput} from "@/components/phone-input";
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription,DialogFooter,DialogClose} from "@/components/ui/dialog";
 import {formatPhone} from "@/lib/phone";
-import {minutes,time,today,type Block,type BlockedPhone,type DayHours,type Service,type SiteConfig} from "@/lib/booking";
+import {lastBookableDate,minutes,time,today,type Block,type BlockedPhone,type DayHours,type Service,type SiteConfig} from "@/lib/booking";
 import {AvailabilityScheduler} from "@/components/admin/availability-scheduler";
 import {AgendaTimeline} from "@/components/admin/agenda-timeline";
 
@@ -14,10 +15,9 @@ type Barber={id:string,name:string,active:number,position:number};
 import type {Booking} from "@/lib/booking-history";
 type CustomerSummary={phone:string,name:string,createdAt:string|null};
 type Dashboard=SiteConfig&{username:string,blocks:Block[],blockedPhones:BlockedPhone[],bookings:Booking[],barbers:Barber[],customers:CustomerSummary[],serviceColors:Record<string,string>};
-type Tab="contato"|"horarios"|"servicos"|"barbeiros"|"ausencias"|"bloqueios"|"senha"|"agenda"|"clientes";
+type Tab="contato"|"horarios"|"servicos"|"barbeiros"|"ausencias"|"bloqueios"|"configuracoes"|"agenda"|"clientes";
 type Ctx={data:Dashboard,onData:(data:Dashboard)=>void,onExpired:()=>void};
-const tabs:{id:Tab,label:string,Icon:typeof Clock}[]=[{id:"agenda",label:"Agenda",Icon:Calendar},{id:"clientes",label:"Clientes",Icon:UserCheck},{id:"contato",label:"Contato",Icon:Phone},{id:"horarios",label:"Horário de funcionamento",Icon:Clock},{id:"servicos",label:"Serviços e valores",Icon:Scissors},{id:"barbeiros",label:"Barbeiros",Icon:Users},{id:"ausencias",label:"Ausências",Icon:CalendarOff},{id:"bloqueios",label:"Telefones bloqueados",Icon:Ban},{id:"senha",label:"Alterar senha",Icon:KeyRound}];
-const maxDate=()=>new Date(Date.now()+89*86400000).toISOString().slice(0,10);
+const tabs:{id:Tab,label:string,Icon:typeof Clock}[]=[{id:"agenda",label:"Agenda",Icon:Calendar},{id:"clientes",label:"Clientes",Icon:UserCheck},{id:"contato",label:"Contato",Icon:Phone},{id:"horarios",label:"Horário de funcionamento",Icon:Clock},{id:"servicos",label:"Serviços e valores",Icon:Scissors},{id:"barbeiros",label:"Barbeiros",Icon:Users},{id:"ausencias",label:"Ausências",Icon:CalendarOff},{id:"bloqueios",label:"Telefones bloqueados",Icon:Ban},{id:"configuracoes",label:"Configurações",Icon:Settings}];
 const longDate=(date:string)=>new Date(date+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"});
 
 class RequestError extends Error{status:number;constructor(message:string,status:number){super(message);this.status=status}}
@@ -109,7 +109,7 @@ function BlocksTab(ctx:Ctx){
  return <div className="admin-form">
   <Heading title="Ausências e pausas" text="Bloqueie um período de um dia específico, como uma saída temporária ou uma folga. Os clientes não verão esses horários na agenda."/>
   <form className="block-form" onSubmit={add}>
-   <div className="admin-field"><label htmlFor="block-date">Data</label><Input id="block-date" type="date" required min={today()} max={maxDate()} value={date} onChange={e=>setDate(e.target.value)}/></div>
+   <div className="admin-field"><label htmlFor="block-date">Data</label><Input id="block-date" type="date" required min={today()} max={lastBookableDate(ctx.data.bookingWindowDays)} value={date} onChange={e=>setDate(e.target.value)}/></div>
    <div className="admin-field block-all-day"><label className="admin-check"><input type="checkbox" checked={allDay} onChange={e=>setAllDay(e.target.checked)}/>Dia inteiro</label></div>
    {!allDay&&<><div className="admin-field"><label htmlFor="block-start">Início</label><Input id="block-start" type="time" step={300} required value={start} onChange={e=>setStart(e.target.value)}/></div>
    <div className="admin-field"><label htmlFor="block-end">Fim</label><Input id="block-end" type="time" step={300} required value={end} onChange={e=>setEnd(e.target.value)}/></div></>}
@@ -235,22 +235,42 @@ function BarbeirosTab(ctx:Ctx){
   </div>;
  }
 
- function PasswordTab(ctx:Ctx){
- const action=useAction(ctx);
+ function SettingsTab(ctx:Ctx){
+ const bookingAction=useAction(ctx),passwordAction=useAction(ctx);
+ const [bookingWindowDays,setBookingWindowDays]=useState(String(ctx.data.bookingWindowDays));
+ const [minAdvanceMinutes,setMinAdvanceMinutes]=useState(String(ctx.data.minAdvanceMinutes));
  const [current,setCurrent]=useState(""),[next,setNext]=useState(""),[confirm,setConfirm]=useState("");
- async function save(e:React.FormEvent){
+ async function saveBookingSettings(e:React.FormEvent){
   e.preventDefault();
-  if(next.length<8)return action.fail("A nova senha precisa ter pelo menos 8 caracteres.");
-  if(next!==confirm)return action.fail("A confirmação não confere com a nova senha.");
-  if(await action.run({action:"password",current,next},"Senha alterada. Outras sessões abertas foram encerradas.")){setCurrent("");setNext("");setConfirm("")}
+  const days=Number(bookingWindowDays);
+  if(!Number.isInteger(days)||days<1||days>365)return bookingAction.fail("Informe entre 1 e 365 dias para a agenda aberta.");
+  const data=await bookingAction.run({action:"bookingSettings",bookingWindowDays:days,minAdvanceMinutes:Number(minAdvanceMinutes)},"Configurações da agenda atualizadas.");
+  if(data){setBookingWindowDays(String(data.bookingWindowDays));setMinAdvanceMinutes(String(data.minAdvanceMinutes))}
  }
- return <form className="admin-form" onSubmit={save}>
-  <Heading title="Alterar senha" text={`Você est· conectado como ${ctx.data.username}. Use uma senha com pelo menos 8 caracteres.`}/>
-  <label htmlFor="current-password">Senha atual</label><Input id="current-password" type="password" autoComplete="current-password" required value={current} onChange={e=>setCurrent(e.target.value)}/>
-  <label htmlFor="new-password">Nova senha</label><Input id="new-password" type="password" autoComplete="new-password" required minLength={8} value={next} onChange={e=>setNext(e.target.value)}/>
-  <label htmlFor="confirm-password">Confirmar nova senha</label><Input id="confirm-password" type="password" autoComplete="new-password" required minLength={8} value={confirm} onChange={e=>setConfirm(e.target.value)}/>
-  <Feedback action={action}/><SaveFooter busy={action.busy} label="Alterar senha"/>
- </form>;
+ async function savePassword(e:React.FormEvent){
+  e.preventDefault();
+  if(next.length<8)return passwordAction.fail("A nova senha precisa ter pelo menos 8 caracteres.");
+  if(next!==confirm)return passwordAction.fail("A confirmação não confere com a nova senha.");
+  if(await passwordAction.run({action:"password",current,next},"Senha alterada. Outras sessões abertas foram encerradas.")){setCurrent("");setNext("");setConfirm("")}
+ }
+ return <div className="admin-form">
+  <Heading title="Configurações" text="Defina a antecedência dos agendamentos e gerencie a senha de acesso ao painel."/>
+  <form className="admin-form" onSubmit={saveBookingSettings}>
+   <h3 className="admin-subtitle">Regras da agenda</h3>
+   <label htmlFor="booking-window-days">Quantidade de dias com a agenda aberta</label><Input id="booking-window-days" type="number" inputMode="numeric" min={1} max={365} required value={bookingWindowDays} onChange={e=>setBookingWindowDays(e.target.value)} disabled={bookingAction.busy}/>
+   <label htmlFor="min-advance-minutes">Tempo mínimo antes do agendamento</label>
+   <Select value={minAdvanceMinutes} onValueChange={setMinAdvanceMinutes} disabled={bookingAction.busy}><SelectTrigger id="min-advance-minutes" className="w-full"><SelectValue/></SelectTrigger><SelectContent>{[5,10,15,20,25,30,35,40,45,50,55,60].map(value=><SelectItem key={value} value={String(value)}>{value} minutos</SelectItem>)}</SelectContent></Select>
+   <p className="admin-hint">Exemplo: com 30 minutos, às 10:50 o primeiro horário possível será 11:20.</p>
+   <Feedback action={bookingAction}/><SaveFooter busy={bookingAction.busy} label="Salvar configurações"/>
+  </form>
+  <form className="admin-form" onSubmit={savePassword}>
+   <h3 className="admin-subtitle">Alterar senha</h3><p className="admin-hint">Conectado como {ctx.data.username}. Use uma senha com pelo menos 8 caracteres.</p>
+   <label htmlFor="current-password">Senha atual</label><Input id="current-password" type="password" autoComplete="current-password" required value={current} onChange={e=>setCurrent(e.target.value)} disabled={passwordAction.busy}/>
+   <label htmlFor="new-password">Nova senha</label><Input id="new-password" type="password" autoComplete="new-password" required minLength={8} value={next} onChange={e=>setNext(e.target.value)} disabled={passwordAction.busy}/>
+   <label htmlFor="confirm-password">Confirmar nova senha</label><Input id="confirm-password" type="password" autoComplete="new-password" required minLength={8} value={confirm} onChange={e=>setConfirm(e.target.value)} disabled={passwordAction.busy}/>
+   <Feedback action={passwordAction}/><SaveFooter busy={passwordAction.busy} label="Alterar senha"/>
+  </form>
+ </div>;
 }
 
 function Login({onSuccess}:{onSuccess:()=>void}){
@@ -287,7 +307,7 @@ export default function Admin(){
   {status==="login"&&<Login onSuccess={()=>{setTab("agenda");load()}}/>}
   {status==="ready"&&ctx&&<><div className="intro"><p className="eyebrow">PAINEL ADMINISTRATIVO</p><h1>GERENCIAR BARBEARIA<span>.</span></h1></div>
   <div className="workspace admin-workspace"><section className="booking-panel"><div className="panel-body">
-   {tab==="contato"&&<ContactTab {...ctx}/>}{tab==="horarios"&&<HoursTab {...ctx}/>}{tab==="servicos"&&<ServicesTab {...ctx}/>}{tab==="barbeiros"&&<BarbeirosTab {...ctx}/>}{tab==="ausencias"&&<BlocksTab {...ctx}/>}{tab==="bloqueios"&&<BlockedPhonesTab {...ctx}/>}{tab==="senha"&&<PasswordTab {...ctx}/>}{tab==="agenda"&&<AgendaTab {...ctx}/>}{tab==="clientes"&&<CustomersTab {...ctx}/>}
+   {tab==="contato"&&<ContactTab {...ctx}/>}{tab==="horarios"&&<HoursTab {...ctx}/>}{tab==="servicos"&&<ServicesTab {...ctx}/>}{tab==="barbeiros"&&<BarbeirosTab {...ctx}/>}{tab==="ausencias"&&<BlocksTab {...ctx}/>}{tab==="bloqueios"&&<BlockedPhonesTab {...ctx}/>}{tab==="configuracoes"&&<SettingsTab {...ctx}/>}{tab==="agenda"&&<AgendaTab {...ctx}/>}{tab==="clientes"&&<CustomersTab {...ctx}/>}
   </div></section>
   <aside><div className="admin-tabs">{tabs.map(({id,label,Icon})=><button key={id} type="button" className={tab===id?"current":""} aria-pressed={tab===id} onClick={()=>setTab(id)}><Icon size={17}/>{label}<ChevronRight size={15}/></button>)}</div><p className="admin-user">Conectado como <strong>{ctx.data.username}</strong>. As alterações aparecem imediatamente no site.</p></aside></div></>}
  </main>

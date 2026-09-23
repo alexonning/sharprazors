@@ -3,7 +3,7 @@ export const bookings=sqliteTable("bookings",{id:text("id").primaryKey(),date:te
 
 export const customers=sqliteTable("customers",{phone:text("phone").primaryKey(),name:text("name").notNull(),createdAt:text("created_at").notNull()});
 
-// Site settings edited in /admin: "whatsapp", "phone" and "hours" (JSON, index 0 = Sunday).
+// Site settings edited in /admin: contact, hours, booking window and minimum advance time.
 export const settings=sqliteTable("settings",{key:text("key").primaryKey(),value:text("value").notNull()});
 
 export const services=sqliteTable("services",{id:text("id").primaryKey(),name:text("name").notNull(),duration:integer("duration").notNull(),priceCents:integer("price_cents"),position:integer("position").notNull().default(0),active:integer("active").notNull().default(1)});

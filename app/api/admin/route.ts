@@ -79,6 +79,14 @@ export async function POST(req:Request){
         await setting("hours",JSON.stringify(hours)).run();
         break;
       }
+      case "bookingSettings":{
+        const bookingWindowDays=Number(body.bookingWindowDays),minAdvanceMinutes=Number(body.minAdvanceMinutes);
+        const advanceOptions=[5,10,15,20,25,30,35,40,45,50,55,60];
+        if(!Number.isInteger(bookingWindowDays)||bookingWindowDays<1||bookingWindowDays>365)return fail("Informe entre 1 e 365 dias para a agenda aberta.");
+        if(!advanceOptions.includes(minAdvanceMinutes))return fail("Selecione um tempo de bloqueio válido.");
+        await db().batch([setting("booking_window_days",String(bookingWindowDays)),setting("min_advance_minutes",String(minAdvanceMinutes))]);
+        break;
+      }
       case "services":{
         const list=Array.isArray(body.services)?body.services:[];
         if(!list.length||list.length>30)return fail("Cadastre entre 1 e 30 serviços.");
@@ -101,7 +109,8 @@ export async function POST(req:Request){
       }
       case "addBlock":{
         const {date,start,end}=body,reason=typeof body.reason==="string"?body.reason.trim().slice(0,80):"";
-        if(typeof date!=="string"||!validDate(date))return fail("Escolha uma data entre hoje e os próximos 90 dias.");
+        const config=await loadConfig();
+        if(typeof date!=="string"||!validDate(date,config.bookingWindowDays))return fail(`Escolha uma data dentro dos próximos ${config.bookingWindowDays} dias.`);
         if(!Number.isInteger(start)||!Number.isInteger(end)||start<0||end>1440||start>=end)return fail("O horário de início precisa ser anterior ao horário de fim.");
         await db().prepare('INSERT INTO schedule_blocks (id,date,start,"end",reason,created_at) VALUES (?,?,?,?,?,?)').bind(crypto.randomUUID(),date,start,end,reason,new Date().toISOString()).run();
         break;

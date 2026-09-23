@@ -49,5 +49,7 @@ WHERE snapshot_version=0;
 INSERT INTO settings (key, value) VALUES
   ('whatsapp', '5546999073974'),
   ('phone', '5546999073974'),
+  ('booking_window_days', '30'),
+  ('min_advance_minutes', '30'),
   ('hours', '[{"closed":true,"periods":[]},{"closed":false,"periods":[[480,690],[810,1170]]},{"closed":false,"periods":[[480,690],[810,1170]]},{"closed":false,"periods":[[480,690],[810,1170]]},{"closed":false,"periods":[[480,690],[810,1170]]},{"closed":false,"periods":[[480,690],[810,1170]]},{"closed":false,"periods":[[480,690],[810,1020]]}]')
 ON CONFLICT (key) DO NOTHING;
